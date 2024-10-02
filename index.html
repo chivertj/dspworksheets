@@ -2,13 +2,18 @@
 <html>
 <head>
 <meta charset="utf-8" />
+<!-- #ffaabd-->
 <style>
-body {background-color: powderblue;
-font-family: courier;}
-h1   {color: blue;}
+body {background-color: #F0F0F0; font-family: courier;}
+h1   {color: blue;background-color:powderblue;
+border-left: 1px solid #000;border-right: 1px solid #000;border-bottom: 1px solid #000;border-top: 1px solid #000;
+}
 p    {color: red;}
+form {border-left: 2px solid #000;border-right: 2px solid #000;border-bottom: 2px solid #000;border-top: 2px solid #000;
+background-color:powderblue;
+}
 </style>
-<title>Introduction to Digital Signals</title>
+<title>Introduction to Signals</title>
 <script type="text/javascript" id="MathJax-script" async
   src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
 </script>
@@ -21,10 +26,22 @@ p    {color: red;}
 </script>
 </head>
 <body>
-<h1>Introduction to Digital Signals</h1>
+<h1>Introduction to Signals</h1>
+<hr>
+<form name="angularfreq">
+Determine the value of the angular frequency, $\omega$ in radians per second for a sine wave, which is a function of continuous time, $t\in\mathcal{R}$ with units of seconds, for the following parameters:
+<table>
+<tr><td>Sine wave frequency:</td><td>$f=$</td><td><input type="text" name="txtnum1"></td><td>Hz</td></tr>
+</table>
+<hr>
+<input type="button" value="ANSWER" onclick="angularfreqEqn()">
+<div id="angularfreqeqnmath">\[\omega=2\pi f\]</div>
+<div id="angularfreqeqnmathpt2">\[\]</div>
+</form>
+<hr>
 <hr>
 <form name="sinewaveeqn">
-Provide the mathematical definition for a sine wave which is a function of continuous time, $t$ with units of seconds given the following parameter values:
+Provide the mathematical definition for a sine wave which is a function of continuous time, $t\in\mathcal{R}$ with units of seconds given the following parameter values:
 <table>
 <tr><td>Sine wave frequency:</td><td>$f=$</td><td><input type="text" name="txtnum1"></td><td>Hz</td></tr>
 <tr><td>Amplitude:</td><td>$A=$</td><td><input type="text" name="txtnum2"></td><td>arbitrary units</td></tr>
@@ -37,7 +54,52 @@ Provide the mathematical definition for a sine wave which is a function of conti
 </form>
 <hr>
 <hr>
+<form name="digitalsine"   border-inline="double">
+Provide the mathematical expression for a digitally sampled sine wave, which is a function of a discrete time index $n\in\mathcal{N}$ with the following parameters:
+<table>
+<tr><td>Sine wave frequency:</td><td>$f=$</td><td><input type="text" name="txtnum1"></td><td>Hz</td></tr>
+<tr><td>Amplitude:</td><td>$A=$</td><td><input type="text" name="txtnum2"></td><td>arbitrary units</td></tr>
+<tr><td>Phase:</td><td>$\phi=$</td><td><input type="text" name="txtnum3"></td><td>radians</td></tr>
+<tr><td>Sampling frequency:</td><td>$f_s=$</td><td><input type="text" name="txtnum4"></td><td>Hz</td></tr>
+</table>
+<hr>
+<input type="button" value="ANSWER" onclick="discreteTimeSignalEqn()">
+<div id="digitalsinewaveeqnmath">\[x[n]=A\sin\left(\frac{2\pi f n}{f_s} + \phi\right)\]</div>
+<div id="digitalsinewaveeqnmathpt2">\[\]</div>
+</form>
+<hr>
+<hr>
+<form name="normaldigitalsine">
+Provide the mathematical expression for a digitally sampled sine wave, which is a function of a discrete time index $n\in\mathcal{N}$ with the following parameters:
+<table>
+<tr><td>Normalised digital frequency:</td><td>$\Omega=$</td><td><input type="text" name="txtnum1"></td><td>rad/sample</td></tr>
+<tr><td>Amplitude:</td><td>$A=$</td><td><input type="text" name="txtnum2"></td><td>arbitrary units</td></tr>
+<tr><td>Phase:</td><td>$\phi=$</td><td><input type="text" name="txtnum3"></td><td>radians</td></tr>
+</table>
+<hr>
+<input type="button" value="ANSWER" onclick="normaldiscreteTimeSignalEqn()">
+<div id="normaldigitalsinewaveeqnmath">\[x[n]=A\sin\left(\Omega n + \phi\right)\]</div>
+<!--<div id="normaldigitalsinewaveeqnmathpt2">\[\]</div>-->
+</form>
+<hr>
+<hr>
+<form name="normaldigitalsinewithsampling">
+Determine the analogue frequency in Hz of a signal given the following parameter values:
+<table>
+<tr><td>Normalised digital frequency:</td><td>$\Omega=$</td><td><input type="text" name="txtnum1"></td><td>rad/sample</td></tr>
+<tr><td>Sampling frequency:</td><td>$f_s=$</td><td><input type="text" name="txtnum2"></td><td>Hz</td></tr>
+</table>
+<hr>
+<input type="button" value="ANSWER" onclick="normaldiscreteTimeSignalEqnwithsampling()">
+<div id="normaldigitalsinewaveeqnmathwithsampling">\[\Omega=\frac{2\pi f}{f_s}\]</div>
+<div id="normaldigitalsinewaveeqnmathwithsamplingpt2">\[\]</div>
+</form>
+<hr>
 <script type="text/javascript">
+
+function roundpl(value1,nplaces) {
+	return Math.round(value1*Math.pow(10,nplaces))/Math.pow(10,nplaces);
+}
 
 function convusernumber(strvalue) {
 	var mult=1;
@@ -74,8 +136,50 @@ function convusernumber(strvalue) {
 	return Number(strvalue)*mult;
 }
 
+function onetonothing(mathString,strtoreplace,num) {
+  if (num===1)
+  	mathString = mathString.replace(strtoreplace,"");
+  else
+   mathString = mathString.replace(strtoreplace,num);
+  return mathString;
+}
+
+function signandzero(mathString,strtoreplace,strtoreplacewithsum,num){
+  if (num===0)
+  	mathString = mathString.replace(strtoreplacewithsum,"");
+  else if (num<0)
+	mathString = mathString.replace(strtoreplacewithsum,num);  
+  else
+   mathString = mathString.replace(strtoreplace,num);
+  return mathString;
+}
+
+function angularfreqEqn() {
+ var num1;
+ num1 = convusernumber(document.angularfreq.txtnum1.value);
+
+(async() => {
+  await MathJax.typesetPromise();
+  const mathDiv = document.getElementById('angularfreqeqnmath');
+  const [mathItem] = MathJax.startup.document.getMathItemsWithin(mathDiv);
+  mathString = '\\omega = 2\\pi fsig';
+  mathString = mathString.replace("fsig",num1);
+  mathItem.reset();
+  mathItem.math = mathString;
+  mathItem.render(MathJax.startup.document);
+
+  const mathDiv2 = document.getElementById('angularfreqeqnmathpt2');
+  const [mathItem2] = MathJax.startup.document.getMathItemsWithin(mathDiv2);
+  mathString2 = '\\ \\ \\ = angfreq\\ \\ \\text{rad/s}';
+  mathString2 = mathString2.replace("angfreq",roundpl(2*Math.PI*num1,3));
+  mathItem2.reset();
+  mathItem2.math = mathString2;
+  mathItem2.render(MathJax.startup.document);
+})();
+}
+
 function contTimeSignalEqn() {
- var num1,num2,num3,str1,str2,str3;
+ var num1,num2,num3;
  num1 = convusernumber(document.sinewaveeqn.txtnum1.value);
  num2 = convusernumber(document.sinewaveeqn.txtnum2.value);
  num3 = convusernumber(document.sinewaveeqn.txtnum3.value);
@@ -86,8 +190,8 @@ function contTimeSignalEqn() {
   const [mathItem] = MathJax.startup.document.getMathItemsWithin(mathDiv);
   mathString = 'x(t)=A\\sin(2\\pi f t + phi)';
   mathString = mathString.replace("f",num1);
+  mathString = signandzero(mathString,"phi","+ phi",num3);
   mathString = mathString.replace("A",num2);
-  mathString = mathString.replace("phi",num3);
   mathItem.reset();
   mathItem.math = mathString;
   mathItem.render(MathJax.startup.document);
@@ -95,24 +199,100 @@ function contTimeSignalEqn() {
   const mathDiv2 = document.getElementById('sinewaveeqnmathpt2');
   const [mathItem2] = MathJax.startup.document.getMathItemsWithin(mathDiv2);
   mathString2 = '\\ \\ \\ =A\\sin(2pif t + phi).';
-
-  if (num2===1)
-  	mathString2 = mathString2.replace("A","");
-  else
-    mathString2 = mathString2.replace("A",num2);
-  if (num3===0)
-  	mathString2 = mathString2.replace(" + phi","");
-  else
-    mathString2 = mathString2.replace("phi",num3);
-    
-  mathString2 = mathString2.replace("phi",num3);
-  mathString2 = mathString2.replace("2pif",Math.round(2*Math.PI*num1));
+  mathString2 = onetonothing(mathString2,"A",num2);
+  mathString2 = signandzero(mathString2,"phi","+ phi",num3);
+  mathString2 = mathString2.replace("2pif",roundpl(2*Math.PI*num1,3));
   mathItem2.reset();
   mathItem2.math = mathString2;
   mathItem2.render(MathJax.startup.document);
+})();
+}
 
+function discreteTimeSignalEqn() {
+ var num1,num2,num3,num4;
+ num1 = convusernumber(document.digitalsine.txtnum1.value);
+ num2 = convusernumber(document.digitalsine.txtnum2.value);
+ num3 = convusernumber(document.digitalsine.txtnum3.value);
+ num4 = convusernumber(document.digitalsine.txtnum4.value);
+
+(async() => {
+  await MathJax.typesetPromise();
+  const mathDiv = document.getElementById('digitalsinewaveeqnmath');
+  const [mathItem] = MathJax.startup.document.getMathItemsWithin(mathDiv);
+  mathString = 'x[n]=A\\sin\\left(\\frac{2\\pi fsig n}{fs} + phi\\right)';
+  mathString = mathString.replace("fsig",num1);
+  mathString = mathString.replace("A",num2);
+  mathString = signandzero(mathString,"phi","+ phi",num3);  
+  mathString = mathString.replace("fs",num4);
+  mathItem.reset();
+  mathItem.math = mathString;
+  mathItem.render(MathJax.startup.document);
+  
+  const mathDiv2 = document.getElementById('digitalsinewaveeqnmathpt2');
+  const [mathItem2] = MathJax.startup.document.getMathItemsWithin(mathDiv2);
+  mathString2 = '\\ \\ \\ =A\\sin(2pifdivfs n + phi).';
+  mathString2 = onetonothing(mathString2,"A",num2);
+  mathString2 = signandzero(mathString2,"phi","+ phi",num3);
+  mathString2 = mathString2.replace("2pifdivfs",roundpl(2*Math.PI*num1/num4,6));
+  mathItem2.reset();
+  mathItem2.math = mathString2;
+  mathItem2.render(MathJax.startup.document);
+  
+})();
+}
+
+function normaldiscreteTimeSignalEqn() {
+ var num1,num2,num3;
+ num1 = convusernumber(document.normaldigitalsine.txtnum1.value);
+ num2 = convusernumber(document.normaldigitalsine.txtnum2.value);
+ num3 = convusernumber(document.normaldigitalsine.txtnum3.value);
+
+(async() => {
+  await MathJax.typesetPromise();
+  const mathDiv = document.getElementById('normaldigitalsinewaveeqnmath');
+  const [mathItem] = MathJax.startup.document.getMathItemsWithin(mathDiv);
+  mathString = 'x[n]=A\\sin\\left(Omega n + phi\\right)';
+  mathString = mathString.replace("Omega",num1);
+  mathString = onetonothing(mathString,"A",num2);
+  mathString = signandzero(mathString,"phi","+ phi",num3);  
+  mathItem.reset();
+  mathItem.math = mathString;
+  mathItem.render(MathJax.startup.document);
+  
+})();
+}
+
+function normaldiscreteTimeSignalEqnwithsampling() {
+ var num1,num2,num3;
+ num1 = convusernumber(document.normaldigitalsinewithsampling.txtnum1.value);
+ num2 = convusernumber(document.normaldigitalsinewithsampling.txtnum2.value);
+
+(async() => {
+  await MathJax.typesetPromise();
+  const mathDiv = document.getElementById('normaldigitalsinewaveeqnmathwithsampling');
+  const [mathItem] = MathJax.startup.document.getMathItemsWithin(mathDiv);
+  mathString = 'Omega = \\frac{2\\pi f}{fs}';
+  mathString = mathString.replace("Omega",num1);
+  mathString = onetonothing(mathString,"fs",num2);
+  
+  mathItem.reset();
+  mathItem.math = mathString;
+  mathItem.render(MathJax.startup.document);
+
+  const mathDiv2 = document.getElementById('normaldigitalsinewaveeqnmathwithsamplingpt2');
+  const [mathItem2] = MathJax.startup.document.getMathItemsWithin(mathDiv2);
+  mathString2 = '\\Rightarrow\\ \\ \\ f=\\frac{Omega\\times fs}{2\\pi} = fsig\\ \\ \\text{Hz}';
+  mathString2 = mathString2.replace("Omega",num1);
+  mathString2 = onetonothing(mathString2,"fs",num2);
+  mathString2 = mathString2.replace("fsig",roundpl(num1*num2/(2*Math.PI),2));
+  
+  mathItem2.reset();
+  mathItem2.math = mathString2;
+  mathItem2.render(MathJax.startup.document);
+  
 })();
 }
 </script>
+
 </body>
 </html>
