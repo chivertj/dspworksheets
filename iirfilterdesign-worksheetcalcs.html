@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<!-- #ffaabd-->
+<style>
+body {background-color: #F0F0F0; font-family: courier;}
+h1   {color: blue;background-color:powderblue;
+border-left: 1px solid #000;border-right: 1px solid #000;border-bottom: 1px solid #000;border-top: 1px solid #000;
+}
+p    {color: red;}
+form {border-left: 2px solid #000;border-right: 2px solid #000;border-bottom: 2px solid #000;border-top: 2px solid #000;
+background-color:powderblue;
+}
+</style>
+<title>Infinite Impulse Response (IIR) Butterworth Filter Design Using Bilinear Transformation</title>
+<script type="text/javascript" id="MathJax-script" async
+  src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
+</script>
+<script>
+  MathJax = {
+    tex: {
+      inlineMath: [['$', '$']]
+    }
+  };
+</script>
+</head>
+<body>
+<h1>Infinite Impulse Response (IIR) Butterworth Filter Design Using Bilinear Transformation</h1>
+<hr>
+<form name="analogueButterworthfilterorder">
+Determine the required analogue Butterworth filter order (low pass) with the following requirements:
+<table>
+<tr><td>Pass band frequency:</td><td>$f_{\rm pass}=$</td><td><input type="text" name="txtnum1"></td><td>Hz</td></tr>
+<tr><td>Stop band frequency:</td><td>$f_{\rm stop}=$</td><td><input type="text" name="txtnum2"></td><td>Hz</td></tr>
+<tr><td>Pass band attenuation:</td><td>$A_{\rm pass}=$</td><td><input type="text" name="txtnum3"></td><td>dB</td></tr>
+<tr><td>Stop band attenuation:</td><td>$A_{\rm stop}=$</td><td><input type="text" name="txtnum4"></td><td>dB</td></tr>
+</table>
+<hr>
+<input type="button" value="ANSWER" onclick="analogueButterworthfilterorderEqn()">
+<div id="analogueButterworthfilterordermathpt1">\[n\geq \frac{1}{2\log_{10}(v_s)}\log_{10}
+\left(\frac{10^{0.1A_{\rm stop}}-1}{\epsilon^2}\right)
+\]</div>
+where
+<div id="analogueButterworthfilterordermathpt2">\[v_s=\frac{f_{\rm stop}}{f_{\rm pass}}\]</div>
+and
+<div id="analogueButterworthfilterordermathpt3">\[\epsilon^2=10^{A_{\rm pass}0.1}-1.\]</div>
+</form>
+<hr>
+
+<hr>
+<form name="analogueButterworthfiltergain">
+Determine the magnitude gain of an analogue Butterworth filter order (low pass) with the following specification and values:
+<table>
+<tr><td>Pass band frequency:</td><td>$f_{\rm pass}=$</td><td><input type="text" name="txtnum1"></td><td>Hz</td></tr>
+<tr><td>Gain test frequency:</td><td>$f_{\rm test}=$</td><td><input type="text" name="txtnum2"></td><td>Hz</td></tr>
+<tr><td>Filter order:</td><td>$n=$</td><td><input type="text" name="txtnum3"></td><td></td></tr>
+<tr><td>Pass band attenuation:</td><td>$A_{\rm pass}=$</td><td><input type="text" name="txtnum4"></td><td>dB</td></tr>
+</table>
+<hr>
+<input type="button" value="ANSWER" onclick="analogueButterworthfiltergainEqn()">
+<div id="analogueButterworthfiltergainmathpt1">\[
+H_{\rm dB}(v_{\rm test})=20\log_{10}\left(
+\frac{1}{\sqrt{1+\epsilon^2v_{\rm test}^{2n}}}
+\right)
+\]</div>
+where
+<div id="analogueButterworthfiltergainmathpt2">\[v_{\rm test}=\frac{f_{\rm test}}{f_{\rm pass}}\]</div>
+and
+<div id="analogueButterworthfiltergainmathpt3">\[\epsilon^2=10^{A_{\rm pass}0.1}-1.\]</div>
+</form>
+<hr>
+
+<hr>
+<form name="digitalButterworthfilterorder">
+Determine the required digital Butterworth filter order (low pass) with the following requirements (using Bilinear transformation):
+<table>
+<tr><td>Pass band frequency:</td><td>$f_{\rm pass}=$</td><td><input type="text" name="txtnum1"></td><td>Hz</td></tr>
+<tr><td>Stop band frequency:</td><td>$f_{\rm stop}=$</td><td><input type="text" name="txtnum2"></td><td>Hz</td></tr>
+<tr><td>Pass band attenuation:</td><td>$A_{\rm pass}=$</td><td><input type="text" name="txtnum3"></td><td>dB</td></tr>
+<tr><td>Stop band attenuation:</td><td>$A_{\rm stop}=$</td><td><input type="text" name="txtnum4"></td><td>dB</td></tr>
+<tr><td>Sampling frequency:</td><td>$f_{s}=$</td><td><input type="text" name="txtnum5"></td><td>Hz</td></tr>
+</table>
+<hr>
+<input type="button" value="ANSWER" onclick="digitalButterworthfilterorderEqn()">
+<div id="digitalButterworthfilterordermathpt1">\[n\geq \frac{1}{2\log_{10}(v'_s)}\log_{10}
+\left(\frac{10^{0.1A_{\rm stop}}-1}{\epsilon^2}\right)
+\]</div>
+where
+<div id="digitalButterworthfilterordermathpt2">\[v'_s=\frac{\omega'_{\rm stop}}{\omega'_{\rm pass}},\ \ \ \ \ \omega'_{\rm stop}=2f_s\tan(\pi f_{\rm stop}/f_s),\ \ \ \ \ \omega'_{\rm pass}=2f_s\tan(\pi f_{\rm pass}/f_s)\]</div>
+<div id="digitalButterworthfilterordermathpt2a">\[\]</div>
+<div id="digitalButterworthfilterordermathpt2b">\[\]</div>
+and
+<div id="digitalButterworthfilterordermathpt3">\[\epsilon^2=10^{A_{\rm pass}0.1}-1.\]</div>
+</form>
+<hr>
+
+<hr>
+<form name="digitalButterworthfiltergain">
+Determine the magnitude gain of a digital Butterworth filter order (low pass) with the following specification and values:
+<table>
+<tr><td>Pass band frequency:</td><td>$f_{\rm pass}=$</td><td><input type="text" name="txtnum1"></td><td>Hz</td></tr>
+<tr><td>Gain test frequency:</td><td>$f_{\rm test}=$</td><td><input type="text" name="txtnum2"></td><td>Hz</td></tr>
+<tr><td>Filter order:</td><td>$n=$</td><td><input type="text" name="txtnum3"></td><td></td></tr>
+<tr><td>Pass band attenuation:</td><td>$A_{\rm pass}=$</td><td><input type="text" name="txtnum4"></td><td>dB</td></tr>
+<tr><td>Sampling frequency:</td><td>$f_s=$</td><td><input type="text" name="txtnum5"></td><td>Hz</td></tr>
+</table>
+<hr>
+<input type="button" value="ANSWER" onclick="digitalButterworthfiltergainEqn()">
+<div id="digitalButterworthfiltergainmathpt1">\[
+H_{\rm dB}(v_{\rm test})=20\log_{10}\left(
+\frac{1}{\sqrt{1+\epsilon^2v_{\rm test}^{\prime 2n}}}
+\right)
+\]</div>
+where
+<div id="digitalButterworthfiltergainmathpt2">\[v'_{\rm test}=\frac{\omega'_{\rm test}}{\omega'_{\rm pass}},\ \ \ \ \ \omega'_{\rm test}=2f_s\tan(\pi f_{\rm test}/f_s),\ \ \ \ \ \omega'_{\rm pass}=2f_s\tan(\pi f_{\rm pass}/f_s)\]</div>
+<div id="digitalButterworthfiltergainmathpt2a">\[\]</div>
+<div id="digitalButterworthfiltergainmathpt2b">\[\]</div>
+and
+<div id="digitalButterworthfiltergainmathpt3">\[\epsilon^2=10^{A_{\rm pass}0.1}-1.\]</div>
+</form>
+<hr>
+
+<hr>
+<script type="text/javascript">
+////////////////////////////////////////////////////////
+function roundpl(value1,nplaces) {
+	return Math.round(value1*Math.pow(10,nplaces))/Math.pow(10,nplaces);
+}
+////////////////////////////////////////////////////////
+function convusernumber(strvalue) {
+	var mult=1;
+	if (strvalue.match("k")) {
+		strvalue=strvalue.replace("k","");
+		mult=1000;
+	}
+	else
+	if (strvalue.match("M")) {
+		strvalue=strvalue.replace("M","");
+		mult=1e6;
+	}
+	else
+	if (strvalue.match("G")) {
+		strvalue=strvalue.replace("G","");
+		mult=1e9;
+	}
+	else
+	if (strvalue.match("u")) {
+		strvalue=strvalue.replace("u","");
+		mult=1e-6;
+	}
+	else
+	if (strvalue.match("m")) {
+		strvalue=strvalue.replace("m","");
+		mult=1e-3;
+	}
+	else
+	if (strvalue.match("n")) {
+		strvalue=strvalue.replace("n","");
+		mult=1e-9;
+	}
+	
+	return Number(strvalue)*mult;
+}
+////////////////////////////////////////////////////////
+function onetonothing(mathString,strtoreplace,num) {
+  if (num===1)
+  	mathString = mathString.replace(strtoreplace,"");
+  else
+   mathString = mathString.replace(strtoreplace,num);
+  return mathString;
+}
+////////////////////////////////////////////////////////
+function signandzero(mathString,strtoreplace,strtoreplacewithsum,num){
+  if (num===0)
+  	mathString = mathString.replace(strtoreplacewithsum,"");
+  else if (num<0)
+	mathString = mathString.replace(strtoreplacewithsum,num);  
+  else
+   mathString = mathString.replace(strtoreplace,num);
+  return mathString;
+}
+////////////////////////////////////////////////////////
+function analogueButterworthfilterorderEqn() {
+ var fpass,fstop,Apass,Astop;
+ fpass = convusernumber(document.analogueButterworthfilterorder.txtnum1.value);
+ fstop = convusernumber(document.analogueButterworthfilterorder.txtnum2.value);
+ Apass = convusernumber(document.analogueButterworthfilterorder.txtnum3.value);
+ Astop = convusernumber(document.analogueButterworthfilterorder.txtnum4.value);
+
+ vslowpass = fstop/fpass;
+ epsq = Math.pow(10,Apass*0.1)-1;
+ analogueordern=1/(2*Math.log10(vslowpass))*Math.log10((Math.pow(10,Astop*0.1)-1)/epsq);
+(async() => {
+  await MathJax.typesetPromise();
+  const mathDiv = document.getElementById('analogueButterworthfilterordermathpt1');
+  const [mathItem] = MathJax.startup.document.getMathItemsWithin(mathDiv);
+  mathString = '\\frac{1}{2\\log_{10}(v_s)}\\log_{10}\\left(\\frac{10^{0.1A_{\\rm stop}}-1}{\\epsilon^2}\\right)=nunrounded\\text{ (unrounded)}';
+  mathString = mathString.replace("nunrounded",roundpl(analogueordern,3));
+  mathItem.reset();
+  mathItem.math = mathString;
+  mathItem.render(MathJax.startup.document);
+
+  const mathDiv2 = document.getElementById('analogueButterworthfilterordermathpt2');
+  const [mathItem2] = MathJax.startup.document.getMathItemsWithin(mathDiv2);
+  mathString2 = 'vs=\\frac{f_{\\rm stop}}{f_{\\rm pass}}=vsvalue';
+  mathString2 = mathString2.replace("vsvalue",roundpl(vslowpass,3));
+  mathItem2.reset();
+  mathItem2.math = mathString2;
+  mathItem2.render(MathJax.startup.document);
+  
+  const mathDiv3 = document.getElementById('analogueButterworthfilterordermathpt3');
+  const [mathItem3] = MathJax.startup.document.getMathItemsWithin(mathDiv3);
+  mathString3 = '\\epsilon^2=10^{A_{\\rm pass}0.1}-1=epsqval.';
+  mathString3 = mathString3.replace("epsqval",roundpl(epsq,3));
+  mathItem3.reset();
+  mathItem3.math = mathString3;
+  mathItem3.render(MathJax.startup.document);
+  
+})();
+}
+////////////////////////////////////////////////////////
+function analogueButterworthfiltergainEqn() {
+ var fpass,fstop,Apass,Astop;
+ fpass = convusernumber(document.analogueButterworthfiltergain.txtnum1.value);
+ ftest = convusernumber(document.analogueButterworthfiltergain.txtnum2.value);
+ n = convusernumber(document.analogueButterworthfiltergain.txtnum3.value);
+ Apass = convusernumber(document.analogueButterworthfiltergain.txtnum4.value);
+
+
+ vslowpass = ftest/fpass;
+ epsq = Math.pow(10,Apass*0.1)-1;
+ gaindB = -10*Math.log10(1+epsq*Math.pow(vslowpass,2*n));
+ //analogueordern=1/(2*Math.log10(vslowpass))*Math.log10((Math.pow(10,Astop*0.1)-1)/epsq);
+(async() => {
+  await MathJax.typesetPromise();
+  const mathDiv = document.getElementById('analogueButterworthfiltergainmathpt1');
+  const [mathItem] = MathJax.startup.document.getMathItemsWithin(mathDiv);
+  mathString = 'H_{\\rm dB}(v_{\\rm test})=20\\log_{10}\\left(\\frac{1}{\\sqrt{1+\\epsilon^2v_{\\rm test}^{2n}}}\\right)=gaindBvalue\\ \\ \\ \\text{dB}';
+  mathString = mathString.replace("gaindBvalue",roundpl(gaindB,3));
+  mathItem.reset();
+  mathItem.math = mathString;
+  mathItem.render(MathJax.startup.document);
+
+  const mathDiv2 = document.getElementById('analogueButterworthfiltergainmathpt2');
+  const [mathItem2] = MathJax.startup.document.getMathItemsWithin(mathDiv2);
+  mathString2 = 'v_{\\rm test}=\\frac{f_{\\rm test}}{f_{\\rm pass}}=vsvalue';
+  mathString2 = mathString2.replace("vsvalue",roundpl(vslowpass,3));
+  mathItem2.reset();
+  mathItem2.math = mathString2;
+  mathItem2.render(MathJax.startup.document);
+  
+  const mathDiv3 = document.getElementById('analogueButterworthfiltergainmathpt3');
+  const [mathItem3] = MathJax.startup.document.getMathItemsWithin(mathDiv3);
+  mathString3 = '\\epsilon^2=10^{A_{\\rm pass}0.1}-1=epsqval.';
+  mathString3 = mathString3.replace("epsqval",roundpl(epsq,3));
+  mathItem3.reset();
+  mathItem3.math = mathString3;
+  mathItem3.render(MathJax.startup.document);
+  
+})();
+}
+////////////////////////////////////////////////////////
+
+////////////////////////////////////////////////////////
+function digitalButterworthfilterorderEqn() {
+ var fpass,fstop,Apass,Astop;
+ fpass = convusernumber(document.digitalButterworthfilterorder.txtnum1.value);
+ fstop = convusernumber(document.digitalButterworthfilterorder.txtnum2.value);
+ Apass = convusernumber(document.digitalButterworthfilterorder.txtnum3.value);
+ Astop = convusernumber(document.digitalButterworthfilterorder.txtnum4.value);
+ fs = convusernumber(document.digitalButterworthfilterorder.txtnum5.value);
+
+ omegaastop = 2*fs*Math.tan(Math.PI*fstop/fs); 
+ omegaapass = 2*fs*Math.tan(Math.PI*fpass/fs);
+ vslowpass = omegaastop/omegaapass;
+ epsq = Math.pow(10,Apass*0.1)-1;
+ digitalordern=1/(2*Math.log10(vslowpass))*Math.log10((Math.pow(10,Astop*0.1)-1)/epsq);
+(async() => {
+  await MathJax.typesetPromise();
+  const mathDiv = document.getElementById('digitalButterworthfilterordermathpt1');
+  const [mathItem] = MathJax.startup.document.getMathItemsWithin(mathDiv);
+  mathString = '\\frac{1}{2\\log_{10}(v_s)}\\log_{10}\\left(\\frac{10^{0.1A_{\\rm stop}}-1}{\\epsilon^2}\\right)=nunrounded\\text{ (unrounded)}';
+  mathString = mathString.replace("nunrounded",roundpl(digitalordern,3));
+  mathItem.reset();
+  mathItem.math = mathString;
+  mathItem.render(MathJax.startup.document);
+
+  const mathDiv2 = document.getElementById('digitalButterworthfilterordermathpt2');
+  const [mathItem2] = MathJax.startup.document.getMathItemsWithin(mathDiv2);
+  mathString2 = 'v\'\_s=\\frac{\\omega\'\_{\\rm stop}}{\\omega\'\_{\\rm pass}}=vsvalue,';
+  mathString2 = mathString2.replace("vsvalue",roundpl(vslowpass,3));
+  mathItem2.reset();
+  mathItem2.math = mathString2;
+  mathItem2.render(MathJax.startup.document);
+
+  const mathDiv2a = document.getElementById('digitalButterworthfilterordermathpt2a');
+  const [mathItem2a] = MathJax.startup.document.getMathItemsWithin(mathDiv2a);
+  mathString2a = '\\omega\'_{\\rm stop}=2f_s\\tan(\\pi f_{\\rm stop}/f_s)=omegaastopvalue,';
+  mathString2a = mathString2a.replace("omegaastopvalue",roundpl(omegaastop,3));
+  mathItem2a.reset();
+  mathItem2a.math = mathString2a;
+  mathItem2a.render(MathJax.startup.document);
+  
+  const mathDiv2b = document.getElementById('digitalButterworthfilterordermathpt2b');
+  const [mathItem2b] = MathJax.startup.document.getMathItemsWithin(mathDiv2b);
+  mathString2b = '\\omega\'_{\\rm pass}=2f_s\\tan(\\pi f_{\\rm pass}/f_s)=omegaapassvalue';
+  mathString2b = mathString2b.replace("omegaapassvalue",roundpl(omegaapass,3));
+  mathItem2b.reset();
+  mathItem2b.math = mathString2b;
+  mathItem2b.render(MathJax.startup.document);
+
+  const mathDiv3 = document.getElementById('digitalButterworthfilterordermathpt3');
+  const [mathItem3] = MathJax.startup.document.getMathItemsWithin(mathDiv3);
+  mathString3 = '\\epsilon^2=10^{A_{\\rm pass}0.1}-1=epsqval.';
+  mathString3 = mathString3.replace("epsqval",roundpl(epsq,3));
+  mathItem3.reset();
+  mathItem3.math = mathString3;
+  mathItem3.render(MathJax.startup.document);
+  
+})();
+}
+////////////////////////////////////////////////////////
+
+////////////////////////////////////////////////////////
+function digitalButterworthfiltergainEqn() {
+ var fpass,ftest,n,Apass,fs;
+ fpass = convusernumber(document.digitalButterworthfiltergain.txtnum1.value);
+ ftest = convusernumber(document.digitalButterworthfiltergain.txtnum2.value);
+ n = convusernumber(document.digitalButterworthfiltergain.txtnum3.value);
+ Apass = convusernumber(document.digitalButterworthfiltergain.txtnum4.value);
+ fs = convusernumber(document.digitalButterworthfiltergain.txtnum5.value);
+
+
+ omegaatest = 2*fs*Math.tan(Math.PI*ftest/fs); 
+ omegaapass = 2*fs*Math.tan(Math.PI*fpass/fs);
+
+ vtest = omegaatest/omegaapass;
+ epsq = Math.pow(10,Apass*0.1)-1;
+ gaindB = -10*Math.log10(1+epsq*Math.pow(vtest,2*n));
+(async() => {
+  await MathJax.typesetPromise();
+  const mathDiv = document.getElementById('digitalButterworthfiltergainmathpt1');
+  const [mathItem] = MathJax.startup.document.getMathItemsWithin(mathDiv);
+  mathString = 'H_{\\rm dB}(v_{\\rm test})=20\\log_{10}\\left(\\frac{1}{\\sqrt{1+\\epsilon^2v_{\\rm test}^{2n}}}\\right)=gaindBvalue\\ \\ \\ \\text{dB}';
+  mathString = mathString.replace("gaindBvalue",roundpl(gaindB,3));
+  mathItem.reset();
+  mathItem.math = mathString;
+  mathItem.render(MathJax.startup.document);
+
+  const mathDiv2 = document.getElementById('digitalButterworthfiltergainmathpt2');
+  const [mathItem2] = MathJax.startup.document.getMathItemsWithin(mathDiv2);
+  mathString2 = 'v\'_{\\rm test}=\\frac{\\omega\'_{\\rm test}}{\\omega\'_{\\rm pass}}=vsvalue,';
+  mathString2 = mathString2.replace("vsvalue",roundpl(vtest,3));
+  mathItem2.reset();
+  mathItem2.math = mathString2;
+  mathItem2.render(MathJax.startup.document);
+
+  const mathDiv2a = document.getElementById('digitalButterworthfiltergainmathpt2a');
+  const [mathItem2a] = MathJax.startup.document.getMathItemsWithin(mathDiv2a);
+  mathString2a = '\\omega\'_{\\rm test}=2f_s\\tan(\\pi f_{\\rm test}/f_s)=omegaatestvalue,';
+  mathString2a = mathString2a.replace("omegaatestvalue",roundpl(omegaatest,3));
+  mathItem2a.reset();
+  mathItem2a.math = mathString2a;
+  mathItem2a.render(MathJax.startup.document);
+  
+  const mathDiv2b = document.getElementById('digitalButterworthfiltergainmathpt2b');
+  const [mathItem2b] = MathJax.startup.document.getMathItemsWithin(mathDiv2b);
+  mathString2b = '\\omega\'_{\\rm pass}=2f_s\\tan(\\pi f_{\\rm pass}/f_s)=omegaapassvalue';
+  mathString2b = mathString2b.replace("omegaapassvalue",roundpl(omegaapass,3));
+  mathItem2b.reset();
+  mathItem2b.math = mathString2b;
+  mathItem2b.render(MathJax.startup.document);
+  
+  const mathDiv3 = document.getElementById('digitalButterworthfiltergainmathpt3');
+  const [mathItem3] = MathJax.startup.document.getMathItemsWithin(mathDiv3);
+  mathString3 = '\\epsilon^2=10^{A_{\\rm pass}0.1}-1=epsqval.';
+  mathString3 = mathString3.replace("epsqval",roundpl(epsq,3));
+  mathItem3.reset();
+  mathItem3.math = mathString3;
+  mathItem3.render(MathJax.startup.document);
+  
+})();
+}
+////////////////////////////////////////////////////////
+
+</script>
+
+</body>
+</html>
