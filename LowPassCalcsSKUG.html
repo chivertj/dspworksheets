@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Low Pass Filter Sallen Key Unity Gain Component Calculations with Frequency Scaling Factor</title>
+  <!-- <script async src="MathJax-3.2.2/es5/tex-mml-chtml.js"></script>  -->
+  <script id="MathJax-script" async
+          src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      max-width: 700px;
+      margin: auto;
+    }
+    .input-group {
+      margin-bottom: 30px;
+    }
+    label {
+      display: inline-block;
+      width: 40px;
+      height: 40px;            
+    }
+    input[type="number"] {
+      width: 80px;
+      margin-right: 10px;
+    }
+    .calc-section {
+      margin-bottom: 40px;
+    }
+    .result {
+      margin-top: 10px;
+    }
+    hr {
+      border: none;
+      border-top: 1px solid #ccc;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>Low Pass Filter Sallen Key Unity Gain Component Calculations with Frequency Scaling Factor</h2>
+
+  <div class="input-group">
+    <label for="FSF">F:</label><input type="number" id="FSF">
+    <label for="Q">Q:</label><input type="number" id="Q">
+    <label for="R">R:</label><input type="number" id="R">
+    <br>
+    <label for="fo">fo: </label><input type="number" id="fo">
+    <label for="Ap">Ap: </label><input type="number" id="Ap">
+    <br>
+    <button onclick="calculateall()">Calculate All</button>        
+  </div>
+  <hr>
+  <hr>
+  <div class="calc-section">
+    <div id="expr1">\[ \omega_o=2\pi f_o \]</div>
+    <button onclick="calculate(1)">Calculate</button>
+    <div id="result1" class="result"></div>
+  </div>
+  <hr>
+
+  <div class="calc-section">
+    <div id="expr2">\[C_2 = \frac{1}{FQ\omega_o(R_1+R_2)}\]</div>
+    <button onclick="calculate(2)">Calculate</button>
+    <div id="result2" class="result"></div>
+  </div>
+  <hr>
+
+  <div class="calc-section">
+    <div id="expr3">\[ C_1 = \frac{1}{F^2\omega_o^2R^2C_2}\]</div>
+    <button onclick="calculate(3)">Calculate</button>
+    <div id="result3" class="result"></div>
+  </div>
+  <hr>
+
+  <div class="calc-section">
+    <div id="expr4">\[ H_o=10^{-A_p/20} \]</div>
+    <button onclick="calculate(4)">Calculate</button>
+    <div id="result4" class="result"></div>
+  </div>
+  <hr>
+  <div class="calc-section">
+    <div id="expr5">\[ R_a=\frac{R_1}{H_o} \]</div>
+    <button onclick="calculate(5)">Calculate</button>
+    <div id="result5" class="result"></div>
+  </div>
+  <hr>
+
+  <div class="calc-section">
+    <div id="expr6">\[ R_b=\frac{R_1}{1-H_o} \]</div>
+    <button onclick="calculate(6)">Calculate</button>
+    <div id="result6" class="result"></div>
+  </div>
+<hr>
+  
+  <div class="calc-section">
+    <div id="expr7">\[ C_0=\frac{1}{\omega_o FR_0} \]</div>
+    <button onclick="calculate(7)">Calculate</button>
+    <div id="result7" class="result"></div>
+  </div>
+
+  <script>
+    function calculateall() {
+	calculate(1);
+	calculate(2);
+	calculate(3);
+	calculate(4);
+	calculate(5);
+	calculate(6);
+	calculate(7);	
+    }
+    
+    function calculate(n) {
+      const FSF = parseFloat(document.getElementById("FSF").value);
+      const Q = parseFloat(document.getElementById("Q").value);
+      const R = parseFloat(document.getElementById("R").value);
+      const fo = parseFloat(document.getElementById("fo").value);
+      const Ap = parseFloat(document.getElementById("Ap").value);
+      let substituted = "", result = "";
+
+      switch (n) {
+        case 1:
+          result = Math.round(2*Math.PI*fo*100)/100;
+	  omegao = result;
+          substituted = `\\[ \\omega_o = 2\\pi ${fo}=${result} \\text{ rad\/s}\\]`;
+          break;
+      case 2:
+	  result = Math.round(1/(FSF*Q*omegao*2*R)*1e12)/1e12;
+	  result = result.toPrecision(4);
+	  C2 = result;
+          substituted = `\\[ C_2 = \\frac{1}{${FSF}\\times ${Q}\\times ${omegao}\\times (${R}+${R})}=${(result*1e9).toPrecision(4)}\\ \\text{nF}\\]`;
+          break;
+      case 3:	  
+          result = Math.round(1/(FSF*FSF*omegao*omegao*R*R*C2)*1e12)/1e12;
+	  result = result.toPrecision(4);
+	  C1 = result;
+//          substituted = `\\[ (${a} - ${d})^2 + ${c} = ${result} \\]`;
+	  substituted = `\\[ C_1 = \\frac{1}{${FSF}^2${omegao}^2${R}^2${C2}}=${(result*1e9).toPrecision(4)}\\ \\text{nF}\\]`;
+          break;
+        case 4:
+          result = Math.round(Math.pow(10,-Ap/20)*1e4)/1e4;
+	  Ho = result;
+          substituted = `\\[ H_o=10^{-${Ap}/20} = ${result} \\]`;
+          break;
+        case 5:
+	  result = Math.round(R/Ho);
+	  substituted = `\\[ R_a = \\frac{${R}}{${Ho}}=${result} \\]`;
+          break;
+        case 6:
+	  result = Math.round(R/(1-Ho));
+	  substituted = `\\[ R_b = \\frac{${R}}{1-${Ho}}=${result} \\]`;
+          break;
+        case 7:
+	  result = Math.round(1/((FSF)*omegao*R)*1e12)/1e12;
+	  result = result.toPrecision(4);
+	  C0 = result;
+	  substituted = `\\[ C_0 = \\frac{1}{${FSF}\\times${omegao}\\times${R}}=${(result*1e9).toPrecision(4)}\\ \\text{nF} \\]`;
+          break;
+      }
+
+      document.getElementById(`result${n}`).innerHTML = substituted;
+      MathJax.typeset();
+    }
+  </script>
+</body>
+</html>
