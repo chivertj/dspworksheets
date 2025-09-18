@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Aliasing Demo</title>
+</head>
+<body>
+  <h2>Aliasing Demo</h2>
+
+  <label for="freq">Signal frequency (Hz): </label>
+  <input type="range" id="freq" min="100" max="24000" step="100" value="1000">
+  <span id="freqValue">1000</span> Hz
+  <br><br>
+
+  <label for="fs">Sampling frequency (Hz): </label>
+  <select id="fs">
+    <option value="8000">8000</option>
+    <option value="16000">16000</option>
+    <option value="22050">22050</option>
+    <option value="32000">32000</option>
+    <option value="44100">44100</option>
+    <option value="48000">48000</option>
+  </select>
+  <br><br>
+
+  <button onclick="playCurrentTone()">Play Tone</button>
+
+  <script>
+    const freqSlider = document.getElementById('freq');
+    const freqValue = document.getElementById('freqValue');
+    const fsSelect = document.getElementById('fs');
+
+    freqSlider.addEventListener('input', () => {
+      freqValue.textContent = freqSlider.value;
+    });
+
+    function playCurrentTone() {
+      const freq = parseInt(freqSlider.value);
+      const fs = parseInt(fsSelect.value);
+      playTone(freq, fs);
+    }
+
+    function playTone(freq, fs) {
+      const duration = 1; // seconds
+      const samples = fs * duration;
+
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+      // Resume context in case it starts suspended (needed on mobile)
+      audioCtx.resume().then(() => {
+        const buffer = audioCtx.createBuffer(1, samples, fs);
+        const data = buffer.getChannelData(0);
+
+        for (let i = 0; i < samples; i++) {
+          data[i] = 0.2 * Math.sin(2 * Math.PI * freq * (i/fs));
+        }
+
+        const source = audioCtx.createBufferSource();
+        source.buffer = buffer;
+        source.connect(audioCtx.destination);
+        source.start();
+      });
+    }
+  </script>
+</body>
+</html>
