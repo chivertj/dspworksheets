@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Interactive Sampling Demo</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <h2>Interactive Sampling of a 5 Hz Sine Wave</h2>
+  <label for="samples">Number of samples: </label>
+  <input type="range" id="samples" min="2" max="140" step="2" value="20">
+  <span id="sampleValue">20</span>
+
+  <canvas id="chart"></canvas>
+
+  <script>
+    const ctx = document.getElementById('chart').getContext('2d');
+    const sampleSlider = document.getElementById('samples');
+    const sampleValue = document.getElementById('sampleValue');
+
+    // Continuous reference signal
+    const t_cont = Array.from({length: 1000}, (_, i) => i/1000);
+    const x_cont = t_cont.map(tt => ({x: tt, y: Math.sin(2*Math.PI*5*tt)}));
+
+    // Chart instance
+    const chart = new Chart(ctx, {
+      type: 'scatter',
+      data: {
+        datasets: [
+          {
+            label: 'Continuous',
+            data: x_cont,
+            showLine: true,
+            borderColor: 'black',
+            pointRadius: 0
+          },
+          {
+            label: 'Sampled',
+            data: [], // will be filled dynamically
+            showLine: true,
+            borderColor: 'red',
+            pointRadius: 20
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        animation: false,
+        scales: {
+            x: { type: 'linear', title: { display: true, text: 'Time (s)', font: { size: 24 } }, ticks: { font: { size: 24 }  } },
+            y: { title: { display: true, text: 'Amplitude', font: { size: 24 } }, ticks: { font: { size: 24 }  } }
+        }
+      }
+    });
+
+    // Function to update sampled dataset
+    function updateSamples(N) {
+      const t_samp = Array.from({length: N}, (_, i) => i/N);
+      const x_samp = t_samp.map(tt => ({x: tt, y: Math.sin(2*Math.PI*5*tt)}));
+      chart.data.datasets[1].data = x_samp;
+      chart.update();
+    }
+
+    // Initialise
+    updateSamples(sampleSlider.value);
+
+    // Event listener for slider
+    sampleSlider.addEventListener('input', (e) => {
+      const N = parseInt(e.target.value);
+      sampleValue.textContent = N;
+      updateSamples(N);
+    });
+  </script>
+</body>
+</html>

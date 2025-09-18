@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Quantization Demo</title>
+</head>
+<body>
+  <h2>Quantization (440 Hz tone)</h2>
+  <button onclick="playQuantized(8)">Play 8-bit</button>
+  <button onclick="playQuantized(4)">Play 4-bit</button>
+  <button onclick="playQuantized(2)">Play 2-bit</button>
+
+  <script>
+    function playQuantized(bits) {
+      const fs = 8000, f = 440, duration = 1;
+      const samples = fs * duration;
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const buffer = audioCtx.createBuffer(1, samples, fs);
+      const data = buffer.getChannelData(0);
+
+      const levels = Math.pow(2, bits);
+      for (let i = 0; i < samples; i++) {
+        let val = 0.8 * Math.sin(2*Math.PI*f*(i/fs));
+        let q = Math.round(val * (levels/2 - 1)) / (levels/2 - 1);
+        data[i] = q;
+      }
+
+      const source = audioCtx.createBufferSource();
+      source.buffer = buffer;
+      source.connect(audioCtx.destination);
+      source.start();
+    }
+  </script>
+</body>
+</html>
