@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Discrete-Time Correlation Quiz</title>
+  <script id="MathJax-script" async
+          src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <!-- QR Code library (kept as requested) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    .sequence { margin: 10px 0; font-size: 18px; }
+    .vector-input { margin: 15px 0; }
+    .vector-input label { margin: 0 8px; display: inline-block; }
+    .correct { color: green; font-weight: bold; }
+    .incorrect { color: red; font-weight: bold; }
+    .steps { font-size: 16px; margin: 5px 0 10px 20px; }
+    button { margin: 10px 5px; padding: 6px 12px; font-size: 16px; }
+  </style>
+</head>
+<body>
+
+<h1>Discrete-Time Correlation Quiz</h1>
+
+<p>Equation (using MATLAB convention):</p>
+<p>
+  \[
+  r_{xy}[m] = (x\star y)[n]=\sum_{k=-\infty}^{\infty} x[k+m] \, y[k]
+  = \sum_{k=-\infty}^{\infty} x[k] \, y[k-m]
+  \]
+</p>
+
+<div class="sequence" id="x-seq"></div>
+<div class="sequence" id="y-seq"></div>
+
+<h2>Your Answer</h2>
+<form id="quiz-form" class="vector-input"></form>
+<button type="button" onclick="checkAnswer()">Check Answer</button>
+<button type="button" onclick="newQuestion()">New Question</button>
+
+<div id="result"></div>
+
+<script>
+function generateRandomSequence(length, min=-3, max=3) {
+  return Array.from({length}, () => Math.floor(Math.random()*(max-min+1))+min);
+}
+
+// MATLAB-style correlation: r_xy[m] = sum_k x[k+m] y[k]
+function correlateMatlab(x, y) {
+  const N = x.length, M = y.length;
+  const lags = Array.from({length: N+M-1}, (_,i) => i-(M-1));
+  let r = Array(N+M-1).fill(0);
+  let steps = [];
+
+  for (let i = 0; i < lags.length; i++) {
+    let m = lags[i];
+    let sum = 0;
+    let symbolicTerms = [];
+    let substitutedTerms = [];
+    for (let k = 0; k < M; k++) {   // iterate over y[k]
+      let idx = k+m;                // x index = k+m
+      symbolicTerms.push(`x[${k}+${m}]\\times y[${k}]`);
+      if (idx >= 0 && idx < N) {
+        substitutedTerms.push(`(${x[idx]})\\times(${y[k]})`);
+        sum += x[idx]*y[k];
+      } else {
+        substitutedTerms.push(`(0)\\times(${y[k]})`);
+      }
+    }
+    let eq = `r[${m}] = ${symbolicTerms.join(" + ")}`
+            + ` = ${substitutedTerms.join(" + ")}`
+            + ` = ${sum}`;
+    r[i] = sum;
+    steps.push(eq);
+  }
+  return {lags, r, steps};
+}
+
+let x, ySeq, r, lags, steps;
+
+function newQuestion() {
+  document.getElementById("result").innerHTML = "";
+  document.getElementById("quiz-form").innerHTML = "";
+
+  x = generateRandomSequence(5, -3, 3);
+  ySeq = generateRandomSequence(3, -2, 2);
+
+  let corr = correlateMatlab(x, ySeq);
+  r = corr.r;
+  lags = corr.lags;
+  steps = corr.steps;
+
+  document.getElementById("x-seq").innerHTML = "<b>x[n]:</b> " + JSON.stringify(x);
+  document.getElementById("y-seq").innerHTML = "<b>y[n]:</b> " + JSON.stringify(ySeq);
+
+  let form = document.getElementById("quiz-form");
+  for (let i = 0; i < r.length; i++) {
+    let label = document.createElement("label");
+    label.innerHTML = "r[" + lags[i] + "]: ";
+    let input = document.createElement("input");
+    input.type = "number";
+    input.id = "r" + i;
+    input.size = 3;
+    label.appendChild(input);
+    form.appendChild(label);
+  }
+}
+
+function checkAnswer() {
+  let feedback = "<h3>Results</h3><ul>";
+  let correct = true;
+  for (let i = 0; i < r.length; i++) {
+    let val = document.getElementById("r"+i).value;
+    if (val === "") {
+      feedback += `<li>r[${lags[i]}] = (no answer) ❌ (Correct: ${r[i]})</li>`;
+      correct = false;
+    } else if (parseInt(val, 10) === r[i]) {
+      feedback += `<li>r[${lags[i]}] = ${val} ✅</li>`;
+    } else {
+      feedback += `<li>r[${lags[i]}] = ${val} ❌ (Correct: ${r[i]})</li>`;
+      correct = false;
+    }
+    feedback += `<div class="steps">\\[ ${steps[i]} \\]</div>`;
+  }
+  feedback += "</ul>";
+  feedback += correct 
+    ? "<p class='correct'>All correct! 🎉</p>" 
+    : "<p class='incorrect'>Some answers are incorrect. Check the computations above.</p>";
+  document.getElementById("result").innerHTML = feedback;
+  MathJax.typesetPromise(); // refresh MathJax rendering safely
+}
+
+// Initialize first question
+newQuestion();
+</script>
+
+<!-- QR snippet will run here -->
+<script src="qr-snippet.js"></script>
+
+</body>
+</html>

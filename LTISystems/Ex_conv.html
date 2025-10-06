@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Discrete-Time Convolution Quiz</title>
+  <script id="MathJax-script" async
+          src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <!-- QR Code library (kept for consistency) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    .sequence { margin: 10px 0; font-size: 18px; }
+    .vector-input { margin: 15px 0; }
+    .vector-input label { margin: 0 8px; display: inline-block; }
+    .correct { color: green; font-weight: bold; }
+    .incorrect { color: red; font-weight: bold; }
+    .steps { font-size: 16px; margin: 5px 0 10px 20px; }
+    button { margin: 10px 5px; padding: 6px 12px; font-size: 16px; }
+  </style>
+</head>
+<body>
+
+<h1>Discrete-Time Convolution Quiz</h1>
+
+<p>Equation:</p>
+<p>
+  \[
+  y[n] = (x * h)[n] = (h * x)[n]
+  = \sum_{k=-\infty}^{\infty} x[k] \, h[n-k] = \sum_{k=-\infty}^{\infty} x[n-k] \, h[k]
+  \]
+</p>
+
+<div class="sequence" id="x-seq"></div>
+<div class="sequence" id="h-seq"></div>
+
+<h2>Your Answer</h2>
+<form id="quiz-form" class="vector-input"></form>
+<button type="button" onclick="checkAnswer()">Check Answer</button>
+<button type="button" onclick="newQuestion()">New Question</button>
+
+<div id="result"></div>
+
+<script>
+function generateRandomSequence(length, min=-3, max=3) {
+  return Array.from({length}, () => Math.floor(Math.random()*(max-min+1))+min);
+}
+
+function convolve(x, h) {
+  let y = Array(x.length + h.length - 1).fill(0);
+  let steps = [];
+  for (let n = 0; n < y.length; n++) {
+    let sum = 0;
+    let terms = [];
+    let substituted = [];
+    for (let k = 0; k < x.length; k++) {
+      if (n-k >= 0 && n-k < h.length) {
+        let product = x[k] * h[n-k];
+        sum += product;
+        terms.push(`x[${k}]\\times h[${n}-${k}]`);
+        substituted.push(`(${x[k]})\\times(${h[n-k]})`);
+      }
+    }
+    y[n] = sum;
+    let eq = `y[${n}] = ${terms.join(" + ")}`
+           + ` = ${substituted.join(" + ")}`
+           + ` = ${sum}`;
+    steps.push(eq);
+  }
+  return {y, steps};
+}
+
+let x, h, y, steps;
+
+function newQuestion() {
+  document.getElementById("result").innerHTML = "";
+  document.getElementById("quiz-form").innerHTML = "";
+
+  x = generateRandomSequence(5, -3, 3);
+  h = generateRandomSequence(3, -2, 2);
+  let conv = convolve(x, h);
+  y = conv.y;
+  steps = conv.steps;
+
+  document.getElementById("x-seq").innerHTML = "<b>x[n]:</b> " + JSON.stringify(x);
+  document.getElementById("h-seq").innerHTML = "<b>h[n]:</b> " + JSON.stringify(h);
+
+  let form = document.getElementById("quiz-form");
+  for (let n = 0; n < y.length; n++) {
+    let label = document.createElement("label");
+    label.innerHTML = "y[" + n + "]: ";
+    let input = document.createElement("input");
+    input.type = "number";
+    input.id = "y" + n;
+    input.size = 3;
+    label.appendChild(input);
+    form.appendChild(label);
+  }
+}
+
+function checkAnswer() {
+  let feedback = "<h3>Results</h3><ul>";
+  let correct = true;
+  for (let n = 0; n < y.length; n++) {
+    let val = document.getElementById("y"+n).value;
+    if (val === "") {
+      feedback += `<li>y[${n}] = (no answer) ❌ (Correct: ${y[n]})<div class="steps">\\[ ${steps[n]} \\]</div></li>`;
+      correct = false;
+    } else if (parseInt(val, 10) === y[n]) {
+      feedback += `<li>y[${n}] = ${val} ✅<div class="steps">\\[ ${steps[n]} \\]</div></li>`;
+    } else {
+      feedback += `<li>y[${n}] = ${val} ❌ (Correct: ${y[n]})<div class="steps">\\[ ${steps[n]} \\]</div></li>`;
+      correct = false;
+    }
+  }
+  feedback += "</ul>";
+  feedback += correct 
+    ? "<p class='correct'>All correct! 🎉</p>" 
+    : "<p class='incorrect'>Some answers are incorrect. Check the computations above.</p>";
+  document.getElementById("result").innerHTML = feedback;
+  MathJax.typesetPromise(); // safe refresh
+}
+
+// Initialize first question
+newQuestion();
+</script>
+
+<!-- QR snippet will run here -->
+<script src="qr-snippet.js"></script>
+
+</body>
+</html>
