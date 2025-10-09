@@ -1,6 +1,6 @@
 <!DOCTYPE html>
-<html>
-<head>
+<html><head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
   <meta charset="utf-8">
   <title>GPS DSP Demo</title>
   <style>
@@ -26,7 +26,7 @@
   </style>
 </head>
 <body>
-  <h2 style="padding:10px;">GPS Trilateration & DSP Cross-Correlation Demo</h2>
+  <h2 style="padding:10px;">GPS Trilateration &amp; DSP Cross-Correlation Demo</h2>
   <p style="padding:10px;">
     Click/tap on the map to move the receiver.  
     Right: instantaneous correlation peaks.  
@@ -34,11 +34,11 @@
   </p>
 
   <div class="container">
-    <canvas id="map"></canvas>
-    <canvas id="corr"></canvas>
+    <canvas id="map" width="400" height="400"></canvas>
+    <canvas id="corr" width="400" height="400"></canvas>
   </div>
   <div>
-    <canvas id="periodic"></canvas>
+    <canvas id="periodic" width="800" height="267"></canvas>
   </div>
 
   <script>
@@ -189,8 +189,9 @@
       }
 
       // dummy correlations
-      sats.forEach((s,i) => {
-        const prn = Array.from({length:32}, ()=> Math.random()>0.5?1:-1);
+	sats.forEach((s,i) => {
+	const prnlength = 48;
+        const prn = Array.from({length:prnlength}, ()=> Math.random()>0.5?1:-1);
         const delay = Math.floor(distance(receiver, s)/10);
         const period = prn.length;
         const received = new Array(4*period+delay+period).fill(0);
@@ -213,7 +214,7 @@
         ctxPer.beginPath();
         corrVals.forEach((val,j)=>{
           let x = left + j*(usableW/corrVals.length);
-          let y = bottom - (val+32)/64*usableH;
+            let y = bottom - (val+prnlength)/(prnlength*2)*usableH;
           if(j===0) ctxPer.moveTo(x,y);
           else ctxPer.lineTo(x,y);
         });
@@ -237,5 +238,6 @@
     window.addEventListener('resize', resizeAll);
     resizeAll();
   </script>
-</body>
-</html>
+
+
+</body></html>
