@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>2nd-Order HPF — Bilinear + Prewarping (Scientific + PZ)</title>
+
+<script src="https://cdn.jsdelivr.net/npm/mathjs@12.4.2/lib/browser/math.js"></script>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+
+<style>
+ body{font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;color:#000;background:#fff;margin:0;padding:20px}
+ h1{text-align:center;font-size:22px;margin-bottom:10px}
+ .container{max-width:1100px;margin:0 auto}
+ .card{background:#fafafa;border:1px solid #ccc;border-radius:8px;padding:16px 20px;margin-top:10px}
+ label{display:block;font-size:13px;margin-top:10px}
+ input,button{border:1px solid #999;border-radius:5px;padding:6px 8px;background:#fff;color:#000;width:100%}
+ button{background:#f0f0f0;cursor:pointer;margin-top:16px}
+ .row{display:flex;flex-wrap:wrap;gap:12px}
+ .col{flex:1;min-width:180px}
+ .plot{height:380px;margin-top:16px}
+ table{border-collapse:collapse;width:100%;margin-top:10px}
+ th,td{border:1px solid #ccc;padding:4px 8px;text-align:center;font-family:monospace}
+ th{background:#eee}
+</style>
+</head>
+
+<body>
+<div class="container">
+<h1>Z-Domain 2nd-Order High-Pass Filter<br/>Bilinear Transform with Prewarping</h1>
+
+<div class="card">
+ <div class="row">
+  <div class="col"><label>Critical frequency f<sub>c</sub> [Hz]</label><input id="fc" type="number" value="1000"/></div>
+  <div class="col"><label>Sampling frequency f<sub>s</sub> [Hz]</label><input id="fs" type="number" value="48000"/></div>
+  <div class="col"><label>Q factor</label><input id="q" type="number" value="0.7071"/></div>
+  <div class="col"><label>Points</label><input id="n" type="number" value="501"/></div>
+  <div class="col" style="align-self:end"><button id="plotBtn">Design & Plot</button></div>
+ </div>
+
+ <div id="intermediate"></div>
+ <div id="mag" class="plot"></div>
+ <div id="phase" class="plot"></div>
+ <div id="pz" class="plot"></div>
+ <div id="coeffs"></div>
+</div>
+</div>
+
+<script>
+const m=math;
+
+function quadRoots(a,b,c){
+ const bb=m.complex(b), aa=m.complex(a), cc=m.complex(c);
+ const disc=m.subtract(m.multiply(bb,bb),m.multiply(m.multiply(4,aa),cc));
+ const sqrtDisc=m.sqrt(disc);
+ const denom=m.multiply(2,aa);
+ const bRe=m.re(bb);
+ const num1=(bRe>=0)?m.subtract(m.unaryMinus(bb),sqrtDisc):m.add(m.unaryMinus(bb),sqrtDisc);
+ const z1=m.divide(num1,denom);
+ const z2=m.divide(cc,m.multiply(aa,z1));
+ return[z1,z2];
+}
+
+function bilinearHPF(fc,fs,Q){
+ if(fc>=fs/2) throw new Error("fc must be below Nyquist.");
+ const Oc=2*fs*Math.tan(Math.PI*fc/fs);
+ const K=2*fs;
+
+ // Analog HP prototype: H(s)=s²/(s²+(Ωc/Q)s+Ωc²)
+ const a0=1, a1=Oc/Q, a2=Oc*Oc;
+ const b0a=1, b1a=0, b2a=0;
+
+ // Bilinear transform substitution
+ const Ad0=a0*K*K+a1*K+a2;
+ const Ad1=-2*a0*K*K+2*a2;
+ const Ad2=a0*K*K-a1*K+a2;
+
+ // Numerator after substitution of s = 2fs(1−z⁻¹)/(1+z⁻¹)
+ // H(s)=s² → (2fs)²(1−z⁻¹)²/(1+z⁻¹)² ⇒ multiply numerator by (1−z⁻¹)²
+ const Bd0=b0a*K*K;
+ const Bd1=-2*b0a*K*K;
+ const Bd2=b0a*K*K;
+
+ const b=[Bd0/Ad0,Bd1/Ad0,Bd2/Ad0];
+ const a=[1,Ad1/Ad0,Ad2/Ad0];
+ return{b,a,Oc,K,a0,a1,a2,Ad0,Ad1,Ad2};
+}
+
+function logspace(a,b,n){const s=(b-a)/(n-1),arr=[];for(let i=0;i<n;i++)arr.push(Math.pow(10,a+i*s));return arr;}
+
+function computeResponse(b,a,fs,fc,n=501){
+ const halfDec=1.5;
+ const fmin=Math.max(1,fc*Math.pow(10,-halfDec));
+ const fmax=Math.min(fc*Math.pow(10,halfDec),fs/2*0.999);
+ const freqs=logspace(Math.log10(fmin),Math.log10(fmax),n);
+ const magdB=[],phaseDeg=[];
+ for(const f of freqs){
+  const w=2*Math.PI*f/fs;
+  const z=m.exp(m.multiply(m.complex(0,-1),w));
+  const z2=m.pow(z,2);
+  const num=m.add(m.add(m.multiply(b[0],1),m.multiply(b[1],z)),m.multiply(b[2],z2));
+  const den=m.add(1,m.add(m.multiply(a[1],z),m.multiply(a[2],z2)));
+  const H=m.divide(num,den);
+  magdB.push(20*Math.log10(m.abs(H)));
+  phaseDeg.push(m.arg(H)*180/Math.PI);
+ }
+ return{freqs,magdB,phaseDeg};
+}
+
+function plot(){
+ const fc=parseFloat(fcInput.value),fs=parseFloat(fsInput.value),Q=parseFloat(qInput.value),n=parseInt(nInput.value);
+ try{
+  const {b,a,Oc,K,a0,a1,a2,Ad0,Ad1,Ad2}=bilinearHPF(fc,fs,Q);
+  const {freqs,magdB,phaseDeg}=computeResponse(b,a,fs,fc,n);
+
+  // Intermediate results
+  document.getElementById("intermediate").innerHTML=`
+   <h3>Intermediate Calculations</h3>
+   <table>
+    <tr><th>Quantity</th><th>Expression</th><th>Value</th></tr>
+    <tr><td>Prewarped Ω<sub>c</sub></td><td>2f<sub>s</sub>tan(πf<sub>c</sub>/f<sub>s</sub>)</td><td>${Oc.toExponential(6)}</td></tr>
+<!--    <tr><td>K</td><td>2f<sub>s</sub></td><td>${K.toFixed(3)}</td></tr>
+    <tr><td>a₀</td><td>1</td><td>${a0}</td></tr>
+    <tr><td>a₁</td><td>Ω<sub>c</sub>/Q</td><td>${a1.toExponential(6)}</td></tr>
+    <tr><td>a₂</td><td>Ω<sub>c</sub>²</td><td>${a2.toExponential(6)}</td></tr>
+    <tr><td>A<sub>d0</sub></td><td>a₀K²+a₁K+a₂</td><td>${Ad0.toExponential(6)}</td></tr>-->
+   </table>`;
+
+  // Coefficients
+  document.getElementById("coeffs").innerHTML=`
+   <h3>Digital Filter Coefficients</h3>
+   <table>
+    <tr><th>Coefficient</th><th>Value</th></tr>
+    <tr><td>b₀</td><td>${b[0].toPrecision(9)}</td></tr>
+    <tr><td>b₁</td><td>${b[1].toPrecision(9)}</td></tr>
+    <tr><td>b₂</td><td>${b[2].toPrecision(9)}</td></tr>
+    <tr><td>a₀</td><td>1.00000000</td></tr>
+    <tr><td>a₁</td><td>${a[1].toPrecision(9)}</td></tr>
+    <tr><td>a₂</td><td>${a[2].toPrecision(9)}</td></tr>
+   </table>`;
+
+  const lineFc={type:"line",x0:fc,x1:fc,y0:-200,y1:10,xref:"x",yref:"y",line:{dash:"dash",color:"black"}};
+  const lineNyq={type:"line",x0:fs/2,x1:fs/2,y0:-200,y1:10,xref:"x",yref:"y",line:{dash:"dot",color:"gray"}};
+
+  Plotly.newPlot("mag",
+   [{x:freqs,y:magdB,mode:"lines",line:{color:"black"}}],
+   {title:"Magnitude |H(f)| [dB]",xaxis:{type:"log",title:"Frequency [Hz]",showgrid:true,gridcolor:"#ccc"},
+    yaxis:{title:"Magnitude [dB]",showgrid:true,gridcolor:"#ccc"},shapes:[lineFc,lineNyq],
+    plot_bgcolor:"#fff",paper_bgcolor:"#fff",font:{color:"#000"},margin:{t:40,r:20,b:60,l:60}},
+   {responsive:true});
+
+  Plotly.newPlot("phase",
+   [{x:freqs,y:phaseDeg,mode:"lines",line:{color:"black"}}],
+   {title:"Phase ∠H(f) [degrees]",xaxis:{type:"log",title:"Frequency [Hz]",showgrid:true,gridcolor:"#ccc"},
+    yaxis:{title:"Phase [°]",showgrid:true,gridcolor:"#ccc"},shapes:[lineFc,lineNyq],
+    plot_bgcolor:"#fff",paper_bgcolor:"#fff",font:{color:"#000"},margin:{t:40,r:20,b:60,l:60}},
+   {responsive:true});
+
+  // Pole–Zero diagram
+  const [z0,z1]=quadRoots(b[0],b[1],b[2]);
+  const [p0,p1]=quadRoots(1,a[1],a[2]);
+  const zeroX=[m.re(z0),m.re(z1)],zeroY=[m.im(z0),m.im(z1)];
+  const poleX=[m.re(p0),m.re(p1)],poleY=[m.im(p0),m.im(p1)];
+  const theta=[],unitX=[],unitY=[];
+  for(let t=0;t<=2*Math.PI;t+=0.01){unitX.push(Math.cos(t));unitY.push(Math.sin(t));}
+  const pzData=[
+   {x:unitX,y:unitY,mode:"lines",line:{color:"#aaa"},name:"Unit circle"},
+   {x:zeroX,y:zeroY,mode:"markers",marker:{color:"blue",symbol:"circle-open",size:10},name:"Zeros"},
+   {x:poleX,y:poleY,mode:"markers",marker:{color:"red",symbol:"x",size:10},name:"Poles"}];
+  Plotly.newPlot("pz",pzData,{
+   title:"Pole–Zero Diagram (z-plane)",
+   xaxis:{title:"Re{z}",zeroline:true,showgrid:true,range:[-1.5,1.5]},
+   yaxis:{title:"Im{z}",zeroline:true,showgrid:true,range:[-1.5,1.5],scaleanchor:"x",scaleratio:1},
+   plot_bgcolor:"#fff",paper_bgcolor:"#fff",font:{color:"#000"},margin:{t:40,r:20,b:60,l:60},showlegend:true});
+ }catch(e){alert(e.message);}
+}
+
+const fcInput=document.getElementById("fc"),fsInput=document.getElementById("fs"),
+      qInput=document.getElementById("q"),nInput=document.getElementById("n");
+document.getElementById("plotBtn").addEventListener("click",plot);
+plot();
+</script>
+</body>
+</html>

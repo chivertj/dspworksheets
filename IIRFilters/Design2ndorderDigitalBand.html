@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>2nd-Order Band-Pass / Band-Stop — Bilinear + Prewarping</title>
+
+<script src="https://cdn.jsdelivr.net/npm/mathjs@12.4.2/lib/browser/math.js"></script>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<style>
+ body{font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;color:#000;background:#fff;margin:0;padding:20px}
+ h1{text-align:center;font-size:22px;margin-bottom:10px}
+ .container{max-width:1100px;margin:0 auto}
+ .card{background:#fafafa;border:1px solid #ccc;border-radius:8px;padding:16px 20px;margin-top:10px}
+ label{display:block;font-size:13px;margin-top:10px}
+ input,select,button{border:1px solid #999;border-radius:5px;padding:6px 8px;background:#fff;color:#000;width:100%}
+ button{background:#f0f0f0;cursor:pointer;margin-top:16px}
+ .row{display:flex;flex-wrap:wrap;gap:12px}
+ .col{flex:1;min-width:180px}
+ .plot{height:380px;margin-top:16px}
+ table{border-collapse:collapse;width:100%;margin-top:10px}
+ th,td{border:1px solid #ccc;padding:4px 8px;text-align:center;font-family:monospace}
+ th{background:#eee}
+</style>
+</head>
+
+<body>
+<div class="container">
+<h1>Z-Domain 2nd-Order Band-Pass / Band-Stop Filter<br/>Bilinear Transform with Prewarping</h1>
+
+<div class="card">
+ <div class="row">
+  <div class="col"><label>Lower cutoff f<sub>1</sub> [Hz]</label><input id="f1" type="number" value="500"/></div>
+  <div class="col"><label>Upper cutoff f<sub>2</sub> [Hz]</label><input id="f2" type="number" value="2000"/></div>
+  <div class="col"><label>Sampling f<sub>s</sub> [Hz]</label><input id="fs" type="number" value="48000"/></div>
+  <div class="col"><label>Filter type</label>
+    <select id="ftype">
+      <option value="bp" selected>Band-Pass</option>
+      <option value="bs">Band-Stop (Notch)</option>
+    </select>
+  </div>
+  <div class="col" style="align-self:end;"><button id="plotBtn">Design & Plot</button></div>
+ </div>
+
+ <div id="intermediate"></div>
+ <div id="mag" class="plot"></div>
+ <div id="phase" class="plot"></div>
+ <div id="pz" class="plot"></div>
+ <div id="coeffs"></div>
+</div>
+</div>
+
+<script>
+const m=math;
+
+// Quadratic solver
+function quadRoots(a,b,c){
+ const bb=m.complex(b), aa=m.complex(a), cc=m.complex(c);
+ const disc=m.subtract(m.multiply(bb,bb),m.multiply(m.multiply(4,aa),cc));
+ const sqrtDisc=m.sqrt(disc);
+ const denom=m.multiply(2,aa);
+ const bRe=m.re(bb);
+ const num1=(bRe>=0)?m.subtract(m.unaryMinus(bb),sqrtDisc):m.add(m.unaryMinus(bb),sqrtDisc);
+ const z1=m.divide(num1,denom);
+ const z2=m.divide(cc,m.multiply(aa,z1));
+ return[z1,z2];
+}
+
+function bilinearBand(fc1,fc2,fs,type){
+ const wc1=2*Math.PI*fc1, wc2=2*Math.PI*fc2;
+ if(fc2>=fs/2) throw new Error("f2 must be below Nyquist");
+ if(fc1<=0 || fc2<=fc1) throw new Error("f1<f2 and >0");
+ // Prewarp
+ const W1=2*fs*Math.tan(Math.PI*fc1/fs);
+ const W2=2*fs*Math.tan(Math.PI*fc2/fs);
+ const B=W2-W1;                     // bandwidth
+ const W0=Math.sqrt(W1*W2);         // center frequency
+ const K=2*fs;
+
+ // Analog prototypes
+ // Band-pass: H(s)= (B*s)/(s²+B*s+W0²)
+ // Band-stop: H(s)= (s²+W0²)/(s²+B*s+W0²)
+ const a0=1,a1=B,a2=W0*W0;
+ let b0a,b1a,b2a;
+ if(type==='bp'){b0a=0;b1a=B;b2a=0;}else{b0a=1;b1a=0;b2a=W0*W0;}
+
+ // Bilinear transform coefficients
+ const Ad0=a0*K*K+a1*K+a2;
+ const Ad1=-2*a0*K*K+2*a2;
+ const Ad2=a0*K*K-a1*K+a2;
+
+ const Bd0=b0a*K*K+b1a*K+b2a;
+ const Bd1=-2*b0a*K*K+2*b2a;
+ const Bd2=b0a*K*K-b1a*K+b2a;
+
+ const b=[Bd0/Ad0,Bd1/Ad0,Bd2/Ad0];
+ const a=[1,Ad1/Ad0,Ad2/Ad0];
+
+ return{b,a,W1,W2,B,W0,K,Ad0,Ad1,Ad2};
+}
+
+function logspace(a,b,n){const s=(b-a)/(n-1),arr=[];for(let i=0;i<n;i++)arr.push(Math.pow(10,a+i*s));return arr;}
+
+function computeResponse(b,a,fs,fc1,fc2,n=501){
+ const fmin=fc1/5, fmax=Math.min(fc2*5,fs/2*0.999);
+ const freqs=logspace(Math.log10(fmin),Math.log10(fmax),n);
+ const magdB=[],phaseDeg=[];
+ for(const f of freqs){
+  const w=2*Math.PI*f/fs;
+  const z=m.exp(m.multiply(m.complex(0,-1),w));
+  const z2=m.pow(z,2);
+  const num=m.add(m.add(m.multiply(b[0],1),m.multiply(b[1],z)),m.multiply(b[2],z2));
+  const den=m.add(1,m.add(m.multiply(a[1],z),m.multiply(a[2],z2)));
+  const H=m.divide(num,den);
+  magdB.push(20*Math.log10(m.abs(H)));
+  phaseDeg.push(m.arg(H)*180/Math.PI);
+ }
+ return{freqs,magdB,phaseDeg};
+}
+
+function plot(){
+ const f1=parseFloat(f1Input.value),f2=parseFloat(f2Input.value),fs=parseFloat(fsInput.value);
+ const type=document.getElementById('ftype').value;
+ try{
+  const {b,a,W1,W2,B,W0,K,Ad0,Ad1,Ad2}=bilinearBand(f1,f2,fs,type);
+  const {freqs,magdB,phaseDeg}=computeResponse(b,a,fs,f1,f2,501);
+
+  document.getElementById('intermediate').innerHTML=`
+   <h3>Intermediate Calculations</h3>
+   <table>
+    <tr><th>Quantity</th><th>Value</th></tr>
+    <tr><td>Prewarped W₁</td><td>${W1.toExponential(6)}</td></tr>
+    <tr><td>Prewarped W₂</td><td>${W2.toExponential(6)}</td></tr>
+    <tr><td>Bandwidth B</td><td>${B.toExponential(6)}</td></tr>
+    <tr><td>Center frequency W₀</td><td>${W0.toExponential(6)}</td></tr>
+   </table>`;
+
+  document.getElementById('coeffs').innerHTML=`
+   <h3>Digital Filter Coefficients</h3>
+   <table>
+    <tr><th>Coeff</th><th>Value</th></tr>
+    <tr><td>b₀</td><td>${b[0].toPrecision(9)}</td></tr>
+    <tr><td>b₁</td><td>${b[1].toPrecision(9)}</td></tr>
+    <tr><td>b₂</td><td>${b[2].toPrecision(9)}</td></tr>
+    <tr><td>a₀</td><td>1.00000000</td></tr>
+    <tr><td>a₁</td><td>${a[1].toPrecision(9)}</td></tr>
+    <tr><td>a₂</td><td>${a[2].toPrecision(9)}</td></tr>
+   </table>`;
+
+  const lineF1={type:'line',x0:f1,x1:f1,y0:-200,y1:10,line:{dash:'dash',color:'black'}};
+  const lineF2={type:'line',x0:f2,x1:f2,y0:-200,y1:10,line:{dash:'dash',color:'black'}};
+  const lineNyq={type:'line',x0:fs/2,x1:fs/2,y0:-200,y1:10,line:{dash:'dot',color:'gray'}};
+
+  Plotly.newPlot('mag',[{x:freqs,y:magdB,mode:'lines',line:{color:'black'}}],
+    {title:`${type==='bp'?'Band-Pass':'Band-Stop'} |H(f)| [dB]`,
+     xaxis:{type:'log',title:'Frequency [Hz]',showgrid:true,gridcolor:'#ccc'},
+     yaxis:{title:'Magnitude [dB]',showgrid:true,gridcolor:'#ccc'},
+     shapes:[lineF1,lineF2,lineNyq],
+     plot_bgcolor:'#fff',paper_bgcolor:'#fff',font:{color:'#000'},margin:{t:40,r:20,b:60,l:60}},
+    {responsive:true});
+
+  Plotly.newPlot('phase',[{x:freqs,y:phaseDeg,mode:'lines',line:{color:'black'}}],
+    {title:'Phase ∠H(f) [degrees]',
+     xaxis:{type:'log',title:'Frequency [Hz]',showgrid:true,gridcolor:'#ccc'},
+     yaxis:{title:'Phase [°]',showgrid:true,gridcolor:'#ccc'},
+     shapes:[lineF1,lineF2,lineNyq],
+     plot_bgcolor:'#fff',paper_bgcolor:'#fff',font:{color:'#000'},margin:{t:40,r:20,b:60,l:60}},
+    {responsive:true});
+
+  const [z0,z1]=quadRoots(b[0],b[1],b[2]);
+  const [p0,p1]=quadRoots(1,a[1],a[2]);
+  const zeroX=[m.re(z0),m.re(z1)],zeroY=[m.im(z0),m.im(z1)];
+  const poleX=[m.re(p0),m.re(p1)],poleY=[m.im(p0),m.im(p1)];
+  const unitX=[],unitY=[];
+  for(let t=0;t<=2*Math.PI;t+=0.01){unitX.push(Math.cos(t));unitY.push(Math.sin(t));}
+  Plotly.newPlot('pz',[
+    {x:unitX,y:unitY,mode:'lines',line:{color:'#aaa'},name:'Unit circle'},
+    {x:zeroX,y:zeroY,mode:'markers',marker:{color:'blue',symbol:'circle-open',size:10},name:'Zeros'},
+    {x:poleX,y:poleY,mode:'markers',marker:{color:'red',symbol:'x',size:10},name:'Poles'}],
+    {title:'Pole–Zero Diagram (z-plane)',
+     xaxis:{title:'Re{z}',range:[-1.5,1.5],showgrid:true},
+     yaxis:{title:'Im{z}',range:[-1.5,1.5],showgrid:true,scaleanchor:'x',scaleratio:1},
+     plot_bgcolor:'#fff',paper_bgcolor:'#fff',font:{color:'#000'},showlegend:true});
+ }catch(e){alert(e.message);}
+}
+
+const f1Input=document.getElementById('f1'),f2Input=document.getElementById('f2'),fsInput=document.getElementById('fs');
+document.getElementById('plotBtn').addEventListener('click',plot);
+plot();
+</script>
+</body>
+</html>
