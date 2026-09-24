@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DSP LED Spectrum Demonstrator</title>
+<style>
+:root{--bg:#101214;--panel:#181b1f;--text:#f1f3f5;--muted:#aab0b7;--border:#454b52}
+*{box-sizing:border-box}
+body{margin:0;padding:24px;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--text);text-align:center}
+h1{margin:0 0 8px;font-size:clamp(1.5rem,5vw,2.2rem)}
+p{color:var(--muted);margin:0 auto 18px;max-width:850px}
+.controls{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;align-items:end;margin:18px auto}
+.control{display:flex;flex-direction:column;gap:5px;text-align:left;font-size:.85rem;color:var(--muted)}
+button,select{font:inherit;padding:9px 12px;border:1px solid #5a626b;border-radius:7px;background:#252a30;color:#fff}
+button{cursor:pointer;font-size:1rem}
+#noteDisplay{font-size:1.3rem;font-weight:650;min-height:2rem;margin:12px 0}
+.spectrum-wrap{overflow-x:auto;padding:4px 0 14px}
+.spectrum-container{display:inline-grid;grid-template-columns:55px auto;grid-template-rows:auto 36px;column-gap:9px;min-width:max-content}
+#yAxis{grid-column:1;grid-row:1;height:380px;display:flex;flex-direction:column;justify-content:space-between;text-align:right;color:var(--muted);font-size:11px;padding:10px 0}
+#ledMatrix{grid-column:2;grid-row:1;display:grid;gap:4px;background:#050606;border:2px solid var(--border);padding:10px;border-radius:8px}
+.led{width:13px;height:19px;border-radius:3px;background:#172019;box-shadow:inset 0 0 3px #000}
+.led.on.low{background:#21df54;box-shadow:0 0 6px #21df54}
+.led.on.mid{background:#e7d826;box-shadow:0 0 6px #e7d826}
+.led.on.high{background:#ef4141;box-shadow:0 0 6px #ef4141}
+#xAxis{grid-column:2;grid-row:2;position:relative;color:var(--muted);font-size:10px}
+.freq-label{position:absolute;top:6px;transform:translateX(-50%);white-space:nowrap}
+.axis-title{color:var(--muted);margin-top:-4px}
+.info{max-width:850px;margin:18px auto 0;background:var(--panel);border:1px solid #30353b;border-radius:8px;padding:12px 16px;color:var(--muted);font-size:.9rem;text-align:left}
+code{color:#fff}
+@media(max-width:700px){body{padding:14px}.led{width:10px;height:18px}#ledMatrix{gap:3px;padding:8px}}
+</style>
+</head>
+<body>
+<h1>DSP LED Spectrum Demonstrator</h1>
+<p>Play a melody and compare the spectra of sine, square, triangle and sawtooth oscillators. The LED matrix is fixed; only the LED states change.</p>
+
+<div class="controls">
+  <button id="playButton">▶ Play notes</button>
+  <button id="stopButton">■ Stop</button>
+
+  <label class="control">Waveform
+    <select id="waveform">
+      <option value="sine">Sine</option>
+      <option value="square">Square</option>
+      <option value="triangle">Triangle</option>
+      <option value="sawtooth">Sawtooth</option>
+    </select>
+  </label>
+
+  <label class="control">Scale octave
+    <select id="octave">
+      <option value="2">C2–C3</option>
+      <option value="3">C3–C4</option>
+      <option value="4" selected>C4–C5</option>
+      <option value="5">C5–C6</option>
+      <option value="6">C6–C7</option>
+      <option value="7">C7–C8</option>
+    </select>
+  </label>
+
+  <label class="control">Waveform level
+    <select id="powerMode">
+      <option value="peak">Same peak amplitude</option>
+      <option value="power" selected>Same average power</option>
+    </select>
+  </label>
+
+  <label class="control">Frequency range
+    <select id="frequencyRange">
+      <option value="1000">0–1 kHz</option>
+      <option value="2000">0–2 kHz</option>
+      <option value="5000" selected>0–5 kHz</option>
+      <option value="10000">0–10 kHz</option>
+      <option value="20000">0–20 kHz</option>
+    </select>
+  </label>
+
+  <label class="control">FFT size
+    <select id="fftSize">
+      <option value="1024">1024</option>
+      <option value="2048">2048</option>
+      <option value="4096" selected>4096</option>
+      <option value="8192">8192</option>
+    </select>
+  </label>
+</div>
+
+<div id="noteDisplay">Ready</div>
+
+<div class="spectrum-wrap">
+  <div class="spectrum-container">
+    <div id="yAxis"><span>0 dB</span><span>−20</span><span>−40</span><span>−60</span><span>−80</span></div>
+    <div id="ledMatrix"></div>
+    <div id="xAxis"></div>
+  </div>
+</div>
+<div class="axis-title">Frequency (Hz)</div>
+
+<div class="info">
+  <strong>Try this:</strong> choose <code>Sine</code> to see mainly the fundamental. Then choose
+  <code>Square</code> or <code>Triangle</code> to see odd harmonics, or <code>Sawtooth</code>
+  to see both even and odd harmonics. <code>Same average power</code> RMS-normalises the four
+  ideal oscillator shapes so waveform comparisons are not simply caused by different total power.
+  Select the octave of the C-major scale and choose a display range up to 20 kHz.
+</div>
+
+<script>
+const NUM_COLUMNS = 48;
+const NUM_ROWS = 16;
+
+let maxFrequency = 5000;
+let audioContext = null;
+let analyser = null;
+let masterGain = null;
+let frequencyData = null;
+let animationID = null;
+let activeOscillators = [];
+let noteTimers = [];
+
+const matrix = document.getElementById("ledMatrix");
+const xAxis = document.getElementById("xAxis");
+const noteDisplay = document.getElementById("noteDisplay");
+
+matrix.style.gridTemplateColumns = `repeat(${NUM_COLUMNS}, 13px)`;
+matrix.style.gridTemplateRows = `repeat(${NUM_ROWS}, 19px)`;
+
+const leds = [];
+for (let row = 0; row < NUM_ROWS; row++) {
+  leds[row] = [];
+  for (let col = 0; col < NUM_COLUMNS; col++) {
+    const led = document.createElement("div");
+    led.className = "led";
+    matrix.appendChild(led);
+    leds[row][col] = led;
+  }
+}
+
+function formatFrequency(f) {
+  return f >= 1000 ? `${(f/1000).toFixed(f % 1000 ? 1 : 0)}k` : `${f}`;
+}
+
+function rebuildFrequencyAxis() {
+  xAxis.innerHTML = "";
+  const divisions = 5;
+  for (let i = 0; i <= divisions; i++) {
+    const f = maxFrequency * i / divisions;
+    const label = document.createElement("span");
+    label.className = "freq-label";
+    label.textContent = formatFrequency(f);
+    label.style.left = `${100 * i / divisions}%`;
+    xAxis.appendChild(label);
+  }
+}
+
+rebuildFrequencyAxis();
+
+function initialiseAudio() {
+  if (audioContext) return;
+
+  audioContext = new (window.AudioContext || window.webkitAudioContext)();
+  analyser = audioContext.createAnalyser();
+  analyser.fftSize = Number(document.getElementById("fftSize").value);
+  analyser.minDecibels = -80;
+  analyser.maxDecibels = 0;
+  analyser.smoothingTimeConstant = 0.45;
+
+  masterGain = audioContext.createGain();
+  masterGain.gain.value = 0.12;
+
+  masterGain.connect(analyser);
+  analyser.connect(audioContext.destination);
+
+  frequencyData = new Uint8Array(analyser.frequencyBinCount);
+}
+
+function buildNotes() {
+  const octave = Number(document.getElementById("octave").value);
+  const names = ["C","D","E","F","G","A","B","C"];
+  const semitones = [0,2,4,5,7,9,11,12];
+
+  // C4 = MIDI 60. Moving the selected octave changes the MIDI base.
+  const baseMidi = 12 * (octave + 1);
+
+  const ascending = semitones.map((offset, i) => {
+    const midi = baseMidi + offset;
+    const frequency = 440 * Math.pow(2, (midi - 69) / 12);
+    const noteOctave = octave + (i === 7 ? 1 : 0);
+    return {
+      name: `${names[i]}${noteOctave}`,
+      frequency,
+      duration: i === 7 ? 0.9 : 0.6
+    };
+  });
+
+  const descending = ascending.slice(0, 7).reverse().map((n, i, a) => ({
+    name: n.name,
+    frequency: n.frequency,
+    duration: i === a.length - 1 ? 1.0 : 0.6
+  }));
+
+  return [...ascending, ...descending];
+}
+
+function waveformGainForMode(waveform) {
+  if (document.getElementById("powerMode").value !== "power") return 1;
+
+  // Web Audio's standard oscillator waveforms have nominal peak amplitude 1.
+  // Their mean-square values are:
+  // sine = 1/2, square = 1, triangle = 1/3, sawtooth = 1/3.
+  // Scale each waveform so its RMS equals that of a unit-peak sine (1/sqrt(2)).
+  switch (waveform) {
+    case "square":   return 1 / Math.sqrt(2);
+    case "triangle": return Math.sqrt(3 / 2);
+    case "sawtooth": return Math.sqrt(3 / 2);
+    case "sine":
+    default:         return 1;
+  }
+}
+
+function playNote(frequency, startTime, duration, waveform) {
+  const osc = audioContext.createOscillator();
+  const gain = audioContext.createGain();
+
+  osc.type = waveform;
+  osc.frequency.setValueAtTime(frequency, startTime);
+
+  const waveformGain = waveformGainForMode(waveform);
+
+  gain.gain.setValueAtTime(0, startTime);
+  gain.gain.linearRampToValueAtTime(waveformGain, startTime + 0.02);
+  gain.gain.setValueAtTime(waveformGain, startTime + Math.max(0.03, duration - 0.04));
+  gain.gain.linearRampToValueAtTime(0, startTime + duration);
+
+  osc.connect(gain);
+  gain.connect(masterGain);
+  osc.start(startTime);
+  osc.stop(startTime + duration);
+
+  activeOscillators.push(osc);
+  osc.onended = () => {
+    activeOscillators = activeOscillators.filter(x => x !== osc);
+  };
+}
+
+function clearTimers() {
+  noteTimers.forEach(clearTimeout);
+  noteTimers = [];
+}
+
+function stopSequence(changeLabel = true) {
+  clearTimers();
+  activeOscillators.forEach(osc => {
+    try { osc.stop(); } catch (_) {}
+  });
+  activeOscillators = [];
+  if (changeLabel) noteDisplay.textContent = "Stopped";
+}
+
+async function playSequence() {
+  initialiseAudio();
+  await audioContext.resume();
+  stopSequence(false);
+
+  const waveform = document.getElementById("waveform").value;
+  const notes = buildNotes();
+  let time = audioContext.currentTime + 0.10;
+
+  for (const note of notes) {
+    playNote(note.frequency, time, note.duration, waveform);
+
+    const delay = Math.max(0, (time - audioContext.currentTime) * 1000);
+    noteTimers.push(setTimeout(() => {
+      noteDisplay.textContent =
+        `${note.name} — ${note.frequency.toFixed(2)} Hz — ${waveform} — ` +
+        (document.getElementById("powerMode").value === "power" ? "equal average power" : "equal peak");
+    }, delay));
+
+    time += note.duration;
+  }
+
+  noteTimers.push(setTimeout(() => {
+    noteDisplay.textContent = "Finished";
+  }, Math.max(0, (time - audioContext.currentTime) * 1000)));
+
+  if (animationID === null) drawSpectrum();
+}
+
+function drawSpectrum() {
+  animationID = requestAnimationFrame(drawSpectrum);
+  if (!analyser || !frequencyData) return;
+
+  analyser.getByteFrequencyData(frequencyData);
+
+  const binWidth = audioContext.sampleRate / analyser.fftSize;
+  const frequencyPerColumn = maxFrequency / NUM_COLUMNS;
+
+  for (let column = 0; column < NUM_COLUMNS; column++) {
+    const lowFrequency = column * frequencyPerColumn;
+    const highFrequency = (column + 1) * frequencyPerColumn;
+
+    const firstBin = Math.max(0, Math.floor(lowFrequency / binWidth));
+    const lastBin = Math.min(
+      frequencyData.length - 1,
+      Math.ceil(highFrequency / binWidth)
+    );
+
+    let magnitude = 0;
+    for (let bin = firstBin; bin <= lastBin; bin++) {
+      magnitude = Math.max(magnitude, frequencyData[bin]);
+    }
+
+    const level = Math.max(
+      0,
+      Math.min(NUM_ROWS, Math.round(magnitude / 255 * NUM_ROWS))
+    );
+
+    for (let row = 0; row < NUM_ROWS; row++) {
+      const led = leds[row][column];
+      const heightFromBottom = NUM_ROWS - row;
+      led.className = "led";
+
+      if (heightFromBottom <= level) {
+        led.classList.add("on");
+        led.classList.add(row < 3 ? "high" : row < 7 ? "mid" : "low");
+      }
+    }
+  }
+}
+
+document.getElementById("playButton").addEventListener("click", playSequence);
+document.getElementById("stopButton").addEventListener("click", () => stopSequence(true));
+
+document.getElementById("frequencyRange").addEventListener("change", e => {
+  maxFrequency = Number(e.target.value);
+  rebuildFrequencyAxis();
+});
+
+document.getElementById("fftSize").addEventListener("change", e => {
+  if (!analyser) return;
+  analyser.fftSize = Number(e.target.value);
+  frequencyData = new Uint8Array(analyser.frequencyBinCount);
+});
+</script>
+</body>
+</html>
