@@ -1,0 +1,2127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Digital Cross-Correlation Demonstrator</title>
+
+<style>
+    body {
+        font-family: Arial, Helvetica, sans-serif;
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+        background: #f4f6f8;
+        color: #222;
+    }
+
+    h1 {
+        text-align: center;
+        margin-bottom: 5px;
+    }
+
+    .subtitle {
+        text-align: center;
+        color: #555;
+        margin-bottom: 25px;
+    }
+
+    h2 {
+        margin-top: 0;
+        color: #174a7e;
+    }
+
+    h3 {
+        margin-bottom: 8px;
+    }
+
+    .panel {
+        background: white;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        padding: 18px;
+        margin-bottom: 20px;
+    }
+
+    .signals {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+    }
+
+    .signal-panel {
+        border: 1px solid #ccc;
+        border-radius: 6px;
+        padding: 15px;
+        background: #fafafa;
+        min-width: 0;
+    }
+
+    .controls {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 12px;
+        margin-bottom: 15px;
+    }
+
+    label {
+        display: block;
+        font-weight: bold;
+        margin-bottom: 4px;
+    }
+
+    select,
+    input[type="number"] {
+        box-sizing: border-box;
+        width: 100%;
+        padding: 8px;
+        font-size: 1rem;
+    }
+
+    input[type="checkbox"] {
+        transform: scale(1.15);
+        margin-right: 7px;
+    }
+
+    button {
+        padding: 10px 16px;
+        font-size: 1rem;
+        border: none;
+        border-radius: 5px;
+        background: #174a7e;
+        color: white;
+        cursor: pointer;
+        margin: 5px 5px 5px 0;
+    }
+
+    button:hover {
+        background: #0f355c;
+    }
+
+    .sequence {
+        font-family: "Courier New", monospace;
+        overflow-x: auto;
+        background: white;
+        border: 1px solid #ddd;
+        padding: 10px;
+        margin: 10px 0;
+        white-space: pre;
+    }
+
+    .equation {
+        font-family: "Times New Roman", serif;
+        font-size: 1.3rem;
+        text-align: center;
+        padding: 12px;
+        background: #f3f7fb;
+        border: 1px solid #c7d7e7;
+        border-radius: 5px;
+        margin: 12px 0;
+    }
+
+    .explanation {
+        background: #fffbea;
+        border-left: 5px solid #d6a800;
+        padding: 10px 14px;
+        margin: 10px 0;
+    }
+
+    .result-box {
+        background: #eef7ee;
+        border: 1px solid #9fc89f;
+        padding: 14px;
+        margin-top: 15px;
+        border-radius: 6px;
+        font-size: 1.05rem;
+    }
+
+    .checkbox-line {
+        margin: 12px 0;
+    }
+
+    .table-scroll {
+        overflow-x: auto;
+        margin-top: 15px;
+    }
+
+    .calculation-table {
+        border-collapse: collapse;
+        width: 100%;
+        min-width: 650px;
+        text-align: center;
+    }
+
+    .calculation-table th,
+    .calculation-table td {
+        border: 1px solid #bbb;
+        padding: 8px;
+    }
+
+    .calculation-table th {
+        background: #edf3f8;
+    }
+
+    .calculation-table tr.product-row {
+        background: #fffbea;
+        font-weight: bold;
+    }
+
+    .sum-display {
+        font-family: "Times New Roman", serif;
+        font-size: 1.2rem;
+        line-height: 1.7;
+        padding: 12px;
+        margin-top: 15px;
+        background: #f7f7f7;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        overflow-x: auto;
+    }
+
+    .final-sum {
+        font-size: 1.3rem;
+        font-weight: bold;
+        margin-top: 10px;
+    }
+
+    svg {
+        width: 100%;
+        height: 280px;
+        border: 1px solid #bbb;
+        background: white;
+        display: block;
+    }
+
+    .grid-line {
+        stroke: #ddd;
+        stroke-width: 1;
+    }
+
+    .axis {
+        stroke: #222;
+        stroke-width: 1.5;
+    }
+
+    .stem {
+        stroke: #1769aa;
+        stroke-width: 3;
+    }
+
+    .stem-point {
+        fill: #1769aa;
+    }
+
+    .peak-stem {
+        stroke: #c62828;
+        stroke-width: 4;
+    }
+
+    .peak-point {
+        fill: #c62828;
+    }
+
+    .axis-label {
+        font-size: 13px;
+        fill: #222;
+    }
+
+    .tick-label {
+        font-size: 11px;
+        fill: #444;
+    }
+
+    @media (max-width: 800px) {
+        .signals {
+            grid-template-columns: 1fr;
+        }
+
+        body {
+            padding: 10px;
+        }
+    }
+</style>
+</head>
+
+<body>
+
+<h1>Digital Cross-Correlation Demonstrator</h1>
+
+<p class="subtitle">
+Explore signal shifting, scaling, noise, cross-correlation conventions,
+individual lag calculations and peak detection.
+</p>
+
+
+<!-- ========================================================= -->
+<!-- 1. SIGNALS -->
+<!-- ========================================================= -->
+
+<div class="panel">
+
+<h2>1. Define the Signals</h2>
+
+<div class="signals">
+
+    <!-- x[n] -->
+    <div class="signal-panel">
+
+        <h3>x[n]</h3>
+
+        <div class="controls">
+
+            <div>
+                <label for="xType">Signal</label>
+                <select id="xType">
+                    <option value="impulse">Impulse</option>
+                    <option value="step">Unit step</option>
+                    <option value="pulse" selected>Rectangular pulse</option>
+                    <option value="triangle">Triangular sequence</option>
+                    <option value="alternating">Alternating sequence</option>
+                </select>
+            </div>
+
+            <div>
+                <label for="xShift">Integer shift</label>
+                <input id="xShift" type="number" value="0" step="1">
+            </div>
+
+            <div>
+                <label for="xScale">Scale</label>
+                <input id="xScale" type="number" value="1" step="0.1">
+            </div>
+
+            <div>
+                <label for="xNoise">Noise level</label>
+                <input id="xNoise" type="number"
+                       value="0.25" min="0" step="0.05">
+            </div>
+
+        </div>
+
+        <div class="checkbox-line">
+            <label>
+                <input id="xAddNoise" type="checkbox">
+                Add noise
+            </label>
+        </div>
+
+        <div id="xValues" class="sequence"></div>
+
+        <svg id="xPlot"
+             viewBox="0 0 1000 280"
+             aria-label="Plot of x[n]"></svg>
+
+    </div>
+
+
+    <!-- y[n] -->
+    <div class="signal-panel">
+
+        <h3>y[n]</h3>
+
+        <div class="controls">
+
+            <div>
+                <label for="yType">Signal</label>
+                <select id="yType">
+                    <option value="impulse">Impulse</option>
+                    <option value="step">Unit step</option>
+                    <option value="pulse" selected>Rectangular pulse</option>
+                    <option value="triangle">Triangular sequence</option>
+                    <option value="alternating">Alternating sequence</option>
+                </select>
+            </div>
+
+            <div>
+                <label for="yShift">Integer shift</label>
+                <input id="yShift" type="number" value="2" step="1">
+            </div>
+
+            <div>
+                <label for="yScale">Scale</label>
+                <input id="yScale" type="number" value="1" step="0.1">
+            </div>
+
+            <div>
+                <label for="yNoise">Noise level</label>
+                <input id="yNoise" type="number"
+                       value="0.25" min="0" step="0.05">
+            </div>
+
+        </div>
+
+        <div class="checkbox-line">
+            <label>
+                <input id="yAddNoise" type="checkbox">
+                Add noise
+            </label>
+        </div>
+
+        <div id="yValues" class="sequence"></div>
+
+        <svg id="yPlot"
+             viewBox="0 0 1000 280"
+             aria-label="Plot of y[n]"></svg>
+
+    </div>
+
+</div>
+
+<button id="newNoiseButton" type="button">
+    Generate New Noise
+</button>
+
+</div>
+
+
+<!-- ========================================================= -->
+<!-- 2. CORRELATION -->
+<!-- ========================================================= -->
+
+<div class="panel">
+
+<h2>2. Select the Cross-Correlation Convention</h2>
+
+<div class="controls">
+
+    <div>
+        <label for="correlationType">
+            Cross-correlation formula
+        </label>
+
+        <select id="correlationType">
+
+            <option value="shiftSecond">
+                Shift second: sum x[n] y*[n-k]
+            </option>
+
+            <option value="shiftFirst">
+                Shift first: sum x[n-k] y*[n]
+            </option>
+
+        </select>
+    </div>
+
+</div>
+
+<div id="correlationEquation" class="equation"></div>
+
+<div id="correlationExplanation" class="explanation"></div>
+
+<button id="computeButton" type="button">
+    Compute Cross-Correlation
+</button>
+
+</div>
+
+
+<!-- ========================================================= -->
+<!-- 3. RESULT -->
+<!-- ========================================================= -->
+
+<div class="panel">
+
+<h2>3. Cross-Correlation Result</h2>
+
+<div id="correlationValues" class="sequence">
+Press Compute Cross-Correlation to calculate the result.
+</div>
+
+<svg id="correlationPlot"
+     viewBox="0 0 1000 300"
+     aria-label="Cross-correlation plot"></svg>
+
+</div>
+
+
+<!-- ========================================================= -->
+<!-- 4. INDIVIDUAL LAG CALCULATION -->
+<!-- ========================================================= -->
+
+<div class="panel">
+
+<h2>4. Examine the Calculation at a Particular Lag</h2>
+
+<p>
+Select a lag <strong>k</strong> to see how the two sequences are
+aligned, multiplied sample-by-sample and then summed.
+</p>
+
+<div class="controls">
+
+    <div>
+        <label for="lagSelect">Lag k</label>
+        <select id="lagSelect">
+            <option value="0">0</option>
+        </select>
+    </div>
+
+</div>
+
+<button id="showCalculationButton" type="button">
+    Show Calculation
+</button>
+
+<div id="lagEquation" class="equation">
+    Compute the cross-correlation first.
+</div>
+
+<div id="lagExplanation" class="explanation">
+    The calculation will appear here.
+</div>
+
+<div id="calculationTableContainer"></div>
+
+<div id="sumDisplay"></div>
+
+</div>
+
+
+<!-- ========================================================= -->
+<!-- 5. PEAK -->
+<!-- ========================================================= -->
+
+<div class="panel">
+
+<h2>5. Find the Correlation Peak</h2>
+
+<div class="checkbox-line">
+
+<label>
+    <input id="absolutePeak" type="checkbox">
+    Find peak using |r<sub>xy</sub>[k]|
+</label>
+
+</div>
+
+<button id="peakButton" type="button">
+    Find Peak
+</button>
+
+<div id="peakResult" class="result-box">
+    Compute the correlation and then press <strong>Find Peak</strong>.
+</div>
+
+</div>
+
+
+<script>
+
+/* ============================================================
+   SETTINGS
+   ============================================================ */
+
+const N_MIN = -8;
+const N_MAX = 8;
+
+let xSequence = {};
+let ySequence = {};
+
+let correlationLags = [];
+let correlationResult = [];
+
+let highlightedPeakIndex = null;
+
+let xNoiseSamples = {};
+let yNoiseSamples = {};
+
+
+/* ============================================================
+   BASIC SIGNALS
+   ============================================================ */
+
+function baseSignal(type, n) {
+
+    switch (type) {
+
+        case "impulse":
+            return n === 0 ? 1 : 0;
+
+        case "step":
+            return n >= 0 ? 1 : 0;
+
+        case "pulse":
+            return (n >= 0 && n <= 3) ? 1 : 0;
+
+        case "triangle":
+
+            if (n === 0) return 1;
+            if (Math.abs(n) === 1) return 0.75;
+            if (Math.abs(n) === 2) return 0.5;
+            if (Math.abs(n) === 3) return 0.25;
+
+            return 0;
+
+        case "alternating":
+
+            return (n >= 0 && n <= 5)
+                ? Math.pow(-1, n)
+                : 0;
+
+        default:
+            return 0;
+    }
+}
+
+
+/* ============================================================
+   NOISE
+   ============================================================ */
+
+function regenerateNoise() {
+
+    xNoiseSamples = {};
+    yNoiseSamples = {};
+
+    for (let n = N_MIN; n <= N_MAX; n++) {
+
+        xNoiseSamples[n] =
+            2 * Math.random() - 1;
+
+        yNoiseSamples[n] =
+            2 * Math.random() - 1;
+    }
+}
+
+
+/* ============================================================
+   CREATE SIGNAL
+   ============================================================ */
+
+function createSequence(prefix) {
+
+    const type =
+        document.getElementById(prefix + "Type").value;
+
+    let shift =
+        parseInt(
+            document.getElementById(prefix + "Shift").value
+        );
+
+    let scale =
+        parseFloat(
+            document.getElementById(prefix + "Scale").value
+        );
+
+    let noiseLevel =
+        parseFloat(
+            document.getElementById(prefix + "Noise").value
+        );
+
+    const addNoise =
+        document.getElementById(
+            prefix + "AddNoise"
+        ).checked;
+
+    if (!Number.isFinite(shift)) {
+        shift = 0;
+    }
+
+    if (!Number.isFinite(scale)) {
+        scale = 1;
+    }
+
+    if (!Number.isFinite(noiseLevel) ||
+        noiseLevel < 0) {
+
+        noiseLevel = 0;
+    }
+
+    const noise =
+        prefix === "x"
+        ? xNoiseSamples
+        : yNoiseSamples;
+
+    const sequence = {};
+
+    for (let n = N_MIN; n <= N_MAX; n++) {
+
+        /*
+            Positive d gives:
+
+                x[n-d]
+
+            which shifts the signal to the right.
+        */
+
+        let value =
+            scale *
+            baseSignal(type, n - shift);
+
+        if (addNoise) {
+            value +=
+                noiseLevel * noise[n];
+        }
+
+        sequence[n] = value;
+    }
+
+    return sequence;
+}
+
+
+/* ============================================================
+   NUMBER FORMATTING
+   ============================================================ */
+
+function formatNumber(value) {
+
+    if (Math.abs(value) < 1e-10) {
+        return "0";
+    }
+
+    return Number(
+        value.toFixed(3)
+    ).toString();
+}
+
+
+/* ============================================================
+   DISPLAY SEQUENCE
+   ============================================================ */
+
+function displaySequence(elementId, sequence) {
+
+    const indices =
+        Object.keys(sequence).map(Number);
+
+    let line1 = "n:     ";
+    let line2 = "value: ";
+
+    for (const n of indices) {
+
+        line1 +=
+            String(n).padStart(7, " ");
+
+        line2 +=
+            formatNumber(sequence[n])
+            .padStart(7, " ");
+    }
+
+    document
+        .getElementById(elementId)
+        .textContent =
+            line1 + "\n" + line2;
+}
+
+
+/* ============================================================
+   SVG HELPERS
+   ============================================================ */
+
+function addLine(
+    svg,
+    x1,
+    y1,
+    x2,
+    y2,
+    className
+) {
+
+    const line =
+        document.createElementNS(
+            "http://www.w3.org/2000/svg",
+            "line"
+        );
+
+    line.setAttribute("x1", x1);
+    line.setAttribute("y1", y1);
+    line.setAttribute("x2", x2);
+    line.setAttribute("y2", y2);
+    line.setAttribute("class", className);
+
+    svg.appendChild(line);
+}
+
+
+function addCircle(
+    svg,
+    cx,
+    cy,
+    r,
+    className
+) {
+
+    const circle =
+        document.createElementNS(
+            "http://www.w3.org/2000/svg",
+            "circle"
+        );
+
+    circle.setAttribute("cx", cx);
+    circle.setAttribute("cy", cy);
+    circle.setAttribute("r", r);
+    circle.setAttribute("class", className);
+
+    svg.appendChild(circle);
+}
+
+
+function addText(
+    svg,
+    x,
+    y,
+    text,
+    className,
+    anchor
+) {
+
+    const element =
+        document.createElementNS(
+            "http://www.w3.org/2000/svg",
+            "text"
+        );
+
+    element.setAttribute("x", x);
+    element.setAttribute("y", y);
+    element.setAttribute("class", className);
+    element.setAttribute(
+        "text-anchor",
+        anchor
+    );
+
+    element.textContent = text;
+
+    svg.appendChild(element);
+}
+
+
+/* ============================================================
+   STEM PLOT
+   ============================================================ */
+
+function plotStem(
+    svgId,
+    indices,
+    values,
+    horizontalLabel,
+    verticalLabel,
+    highlightIndex = null
+) {
+
+    const svg =
+        document.getElementById(svgId);
+
+    svg.innerHTML = "";
+
+    const width = 1000;
+
+    const height =
+        svgId === "correlationPlot"
+        ? 300
+        : 280;
+
+    const marginLeft = 60;
+    const marginRight = 25;
+    const marginTop = 25;
+    const marginBottom = 45;
+
+    const plotWidth =
+        width -
+        marginLeft -
+        marginRight;
+
+    const plotHeight =
+        height -
+        marginTop -
+        marginBottom;
+
+    let minValue =
+        Math.min(0, ...values);
+
+    let maxValue =
+        Math.max(0, ...values);
+
+    if (minValue === maxValue) {
+        minValue -= 1;
+        maxValue += 1;
+    }
+
+    const padding =
+        0.15 *
+        (maxValue - minValue);
+
+    minValue -= padding;
+    maxValue += padding;
+
+    const minIndex =
+        Math.min(...indices);
+
+    const maxIndex =
+        Math.max(...indices);
+
+
+    function xPosition(index) {
+
+        if (maxIndex === minIndex) {
+            return width / 2;
+        }
+
+        return marginLeft +
+            (index - minIndex) /
+            (maxIndex - minIndex) *
+            plotWidth;
+    }
+
+
+    function yPosition(value) {
+
+        return marginTop +
+            (maxValue - value) /
+            (maxValue - minValue) *
+            plotHeight;
+    }
+
+
+    const zeroY =
+        yPosition(0);
+
+
+    /* Grid */
+
+    for (const n of indices) {
+
+        const x =
+            xPosition(n);
+
+        addLine(
+            svg,
+            x,
+            marginTop,
+            x,
+            height - marginBottom,
+            "grid-line"
+        );
+    }
+
+
+    const horizontalLines = 6;
+
+    for (let i = 0;
+         i <= horizontalLines;
+         i++) {
+
+        const value =
+            minValue +
+            i *
+            (maxValue - minValue) /
+            horizontalLines;
+
+        const y =
+            yPosition(value);
+
+        addLine(
+            svg,
+            marginLeft,
+            y,
+            width - marginRight,
+            y,
+            "grid-line"
+        );
+
+        addText(
+            svg,
+            marginLeft - 8,
+            y + 4,
+            formatNumber(value),
+            "tick-label",
+            "end"
+        );
+    }
+
+
+    /* Axes */
+
+    addLine(
+        svg,
+        marginLeft,
+        zeroY,
+        width - marginRight,
+        zeroY,
+        "axis"
+    );
+
+    addLine(
+        svg,
+        marginLeft,
+        marginTop,
+        marginLeft,
+        height - marginBottom,
+        "axis"
+    );
+
+
+    /* Stems */
+
+    for (let i = 0;
+         i < indices.length;
+         i++) {
+
+        const x =
+            xPosition(indices[i]);
+
+        const y =
+            yPosition(values[i]);
+
+        const isPeak =
+            highlightIndex !== null &&
+            i === highlightIndex;
+
+        addLine(
+            svg,
+            x,
+            zeroY,
+            x,
+            y,
+            isPeak
+                ? "peak-stem"
+                : "stem"
+        );
+
+        addCircle(
+            svg,
+            x,
+            y,
+            4.5,
+            isPeak
+                ? "peak-point"
+                : "stem-point"
+        );
+
+        /*
+           Avoid excessive tick labels on the
+           longer correlation plot.
+        */
+
+        const showTick =
+            indices.length <= 20 ||
+            indices[i] % 2 === 0;
+
+        if (showTick) {
+
+            addText(
+                svg,
+                x,
+                zeroY + 18,
+                indices[i],
+                "tick-label",
+                "middle"
+            );
+        }
+    }
+
+
+    /* Labels */
+
+    addText(
+        svg,
+        width - marginRight,
+        height - 10,
+        horizontalLabel,
+        "axis-label",
+        "end"
+    );
+
+    addText(
+        svg,
+        marginLeft + 8,
+        marginTop + 12,
+        verticalLabel,
+        "axis-label",
+        "start"
+    );
+}
+
+
+/* ============================================================
+   SAFE SAMPLE ACCESS
+   ============================================================ */
+
+function sample(sequence, n) {
+
+    return Object.prototype.hasOwnProperty.call(
+        sequence,
+        n
+    )
+        ? sequence[n]
+        : 0;
+}
+
+
+/* ============================================================
+   UPDATE SIGNALS
+   ============================================================ */
+
+function updateSignals() {
+
+    xSequence =
+        createSequence("x");
+
+    ySequence =
+        createSequence("y");
+
+    displaySequence(
+        "xValues",
+        xSequence
+    );
+
+    displaySequence(
+        "yValues",
+        ySequence
+    );
+
+    const indices =
+        Object.keys(xSequence)
+        .map(Number);
+
+    plotStem(
+        "xPlot",
+        indices,
+        indices.map(
+            n => xSequence[n]
+        ),
+        "n",
+        "x[n]"
+    );
+
+    plotStem(
+        "yPlot",
+        indices,
+        indices.map(
+            n => ySequence[n]
+        ),
+        "n",
+        "y[n]"
+    );
+
+    invalidateCorrelation();
+}
+
+
+/* ============================================================
+   INVALIDATE OLD RESULT
+   ============================================================ */
+
+function invalidateCorrelation() {
+
+    correlationLags = [];
+    correlationResult = [];
+    highlightedPeakIndex = null;
+
+    document
+        .getElementById(
+            "correlationValues"
+        )
+        .textContent =
+        "Press Compute Cross-Correlation " +
+        "to calculate the result.";
+
+    document
+        .getElementById(
+            "correlationPlot"
+        )
+        .innerHTML = "";
+
+    document
+        .getElementById(
+            "peakResult"
+        )
+        .innerHTML =
+        "Compute the correlation and then " +
+        "press <strong>Find Peak</strong>.";
+
+    resetLagCalculation();
+}
+
+
+/* ============================================================
+   CORRELATION DESCRIPTION
+   ============================================================ */
+
+function updateCorrelationDescription() {
+
+    const type =
+        document.getElementById(
+            "correlationType"
+        ).value;
+
+    const equation =
+        document.getElementById(
+            "correlationEquation"
+        );
+
+    const explanation =
+        document.getElementById(
+            "correlationExplanation"
+        );
+
+    if (type === "shiftSecond") {
+
+        equation.innerHTML =
+            "r<sub>xy</sub>[k] = " +
+            "&Sigma;<sub>n</sub> " +
+            "x[n] y<sup>*</sup>[n-k]";
+
+        explanation.innerHTML =
+            "<strong>Shift second:</strong> " +
+            "the second sequence is shifted. " +
+            "A positive k shifts " +
+            "y[n-k] to the right.";
+
+    } else {
+
+        equation.innerHTML =
+            "r<sub>xy</sub>[k] = " +
+            "&Sigma;<sub>n</sub> " +
+            "x[n-k] y<sup>*</sup>[n]";
+
+        explanation.innerHTML =
+            "<strong>Shift first:</strong> " +
+            "the first sequence is shifted. " +
+            "A positive k shifts " +
+            "x[n-k] to the right.";
+    }
+}
+
+
+/* ============================================================
+   COMPUTE CROSS-CORRELATION
+   ============================================================ */
+
+function computeCorrelation() {
+
+    const type =
+        document.getElementById(
+            "correlationType"
+        ).value;
+
+    correlationLags = [];
+    correlationResult = [];
+
+    /*
+        Both displayed sequences have length L.
+
+        The complete finite cross-correlation
+        therefore contains:
+
+             2L - 1
+
+        samples, with lags
+
+             -(L-1) ... +(L-1)
+    */
+
+    const length =
+        N_MAX - N_MIN + 1;
+
+    const maxLag =
+        length - 1;
+
+    for (let k = -maxLag;
+         k <= maxLag;
+         k++) {
+
+        let sum = 0;
+
+        /*
+           Since values outside the stored range
+           are treated as zero, summing across this
+           finite n range includes every possible
+           overlap.
+        */
+
+        const calculationMin =
+            N_MIN - maxLag;
+
+        const calculationMax =
+            N_MAX + maxLag;
+
+        for (let n = calculationMin;
+             n <= calculationMax;
+             n++) {
+
+            if (type === "shiftSecond") {
+
+                /*
+                    r_xy[k] =
+                    sum_n x[n] y*[n-k]
+
+                    All signals here are real,
+                    so conjugation has no numerical
+                    effect.
+                */
+
+                sum +=
+                    sample(xSequence, n) *
+                    sample(ySequence, n - k);
+
+            } else {
+
+                /*
+                    r_xy[k] =
+                    sum_n x[n-k] y*[n]
+                */
+
+                sum +=
+                    sample(xSequence, n - k) *
+                    sample(ySequence, n);
+            }
+        }
+
+        correlationLags.push(k);
+        correlationResult.push(sum);
+    }
+
+    displayCorrelationValues();
+
+    highlightedPeakIndex = null;
+
+    plotStem(
+        "correlationPlot",
+        correlationLags,
+        correlationResult,
+        "k",
+        "r_xy[k]"
+    );
+
+    populateLagSelector();
+
+    resetLagCalculation(false);
+
+    document
+        .getElementById(
+            "peakResult"
+        )
+        .innerHTML =
+        "Correlation calculated. " +
+        "Press <strong>Find Peak</strong> " +
+        "to determine the peak and lag.";
+}
+
+
+/* ============================================================
+   DISPLAY CORRELATION VALUES
+   ============================================================ */
+
+function displayCorrelationValues() {
+
+    let line1 = "k:       ";
+    let line2 = "r_xy[k]: ";
+
+    for (let i = 0;
+         i < correlationLags.length;
+         i++) {
+
+        line1 +=
+            String(
+                correlationLags[i]
+            ).padStart(8, " ");
+
+        line2 +=
+            formatNumber(
+                correlationResult[i]
+            ).padStart(8, " ");
+    }
+
+    document
+        .getElementById(
+            "correlationValues"
+        )
+        .textContent =
+        line1 + "\n" + line2;
+}
+
+
+/* ============================================================
+   POPULATE LAG SELECTOR
+   ============================================================ */
+
+function populateLagSelector() {
+
+    const selector =
+        document.getElementById(
+            "lagSelect"
+        );
+
+    selector.innerHTML = "";
+
+    for (const k of correlationLags) {
+
+        const option =
+            document.createElement(
+                "option"
+            );
+
+        option.value = k;
+        option.textContent = k;
+
+        if (k === 0) {
+            option.selected = true;
+        }
+
+        selector.appendChild(option);
+    }
+}
+
+
+/* ============================================================
+   RESET LAG CALCULATION
+   ============================================================ */
+
+function resetLagCalculation(
+    noCorrelation = true
+) {
+
+    document
+        .getElementById(
+            "calculationTableContainer"
+        )
+        .innerHTML = "";
+
+    document
+        .getElementById(
+            "sumDisplay"
+        )
+        .innerHTML = "";
+
+    if (noCorrelation) {
+
+        document
+            .getElementById(
+                "lagEquation"
+            )
+            .innerHTML =
+            "Compute the cross-correlation first.";
+
+        document
+            .getElementById(
+                "lagExplanation"
+            )
+            .innerHTML =
+            "The calculation will appear here.";
+
+    } else {
+
+        document
+            .getElementById(
+                "lagEquation"
+            )
+            .innerHTML =
+            "Select a lag k and press " +
+            "<strong>Show Calculation</strong>.";
+
+        document
+            .getElementById(
+                "lagExplanation"
+            )
+            .innerHTML =
+            "The table will show the two " +
+            "aligned sequences, their products " +
+            "and the resulting sum.";
+    }
+}
+
+
+/* ============================================================
+   SHOW ONE LAG CALCULATION
+   ============================================================ */
+
+function showLagCalculation() {
+
+    if (correlationResult.length === 0) {
+
+        resetLagCalculation(true);
+        return;
+    }
+
+    const k =
+        parseInt(
+            document.getElementById(
+                "lagSelect"
+            ).value
+        );
+
+    const type =
+        document.getElementById(
+            "correlationType"
+        ).value;
+
+    const equation =
+        document.getElementById(
+            "lagEquation"
+        );
+
+    const explanation =
+        document.getElementById(
+            "lagExplanation"
+        );
+
+    /*
+       We only need to display positions where at
+       least one of the two finite sequences exists.
+
+       This lets students see zeros entering/leaving
+       as one sequence is shifted.
+    */
+
+    let nMin;
+    let nMax;
+
+    if (type === "shiftSecond") {
+
+        /*
+           y[n-k] has support over the stored
+           y range shifted right by k.
+        */
+
+        nMin =
+            Math.min(
+                N_MIN,
+                N_MIN + k
+            );
+
+        nMax =
+            Math.max(
+                N_MAX,
+                N_MAX + k
+            );
+
+        equation.innerHTML =
+            "r<sub>xy</sub>[" + k + "] = " +
+            "&Sigma;<sub>n</sub> " +
+            "x[n] y<sup>*</sup>[n" +
+            signedMinusK(k) +
+            "]";
+
+        explanation.innerHTML =
+            "<strong>Shift second:</strong> " +
+            "for k = " + k +
+            ", compare x[n] with " +
+            "y[n" + signedMinusK(k) +
+            "]. Multiply the aligned samples " +
+            "and then add all of the products.";
+
+    } else {
+
+        /*
+           x[n-k] has support over the stored
+           x range shifted right by k.
+        */
+
+        nMin =
+            Math.min(
+                N_MIN,
+                N_MIN + k
+            );
+
+        nMax =
+            Math.max(
+                N_MAX,
+                N_MAX + k
+            );
+
+        equation.innerHTML =
+            "r<sub>xy</sub>[" + k + "] = " +
+            "&Sigma;<sub>n</sub> " +
+            "x[n" +
+            signedMinusK(k) +
+            "] y<sup>*</sup>[n]";
+
+        explanation.innerHTML =
+            "<strong>Shift first:</strong> " +
+            "for k = " + k +
+            ", compare x[n" +
+            signedMinusK(k) +
+            "] with y[n]. Multiply the aligned " +
+            "samples and then add all of the products.";
+    }
+
+
+    const nValues = [];
+    const firstValues = [];
+    const secondValues = [];
+    const products = [];
+
+    for (let n = nMin;
+         n <= nMax;
+         n++) {
+
+        let first;
+        let second;
+
+        if (type === "shiftSecond") {
+
+            first =
+                sample(xSequence, n);
+
+            second =
+                sample(ySequence, n - k);
+
+        } else {
+
+            first =
+                sample(xSequence, n - k);
+
+            second =
+                sample(ySequence, n);
+        }
+
+        nValues.push(n);
+        firstValues.push(first);
+        secondValues.push(second);
+        products.push(first * second);
+    }
+
+
+    createCalculationTable(
+        type,
+        k,
+        nValues,
+        firstValues,
+        secondValues,
+        products
+    );
+
+    createSumDisplay(
+        k,
+        firstValues,
+        secondValues,
+        products
+    );
+}
+
+
+/* ============================================================
+   FORMAT n-k EXPRESSION
+
+   k =  2 -> n-2
+   k = -2 -> n+2
+   k =  0 -> n
+   ============================================================ */
+
+function signedMinusK(k) {
+
+    if (k === 0) {
+        return "";
+    }
+
+    if (k > 0) {
+        return "-" + k;
+    }
+
+    return "+" + Math.abs(k);
+}
+
+
+/* ============================================================
+   CALCULATION TABLE
+   ============================================================ */
+
+function createCalculationTable(
+    type,
+    k,
+    nValues,
+    firstValues,
+    secondValues,
+    products
+) {
+
+    const container =
+        document.getElementById(
+            "calculationTableContainer"
+        );
+
+    container.innerHTML = "";
+
+    const scroll =
+        document.createElement("div");
+
+    scroll.className =
+        "table-scroll";
+
+    const table =
+        document.createElement("table");
+
+    table.className =
+        "calculation-table";
+
+
+    /*
+       Row 1: n
+    */
+
+    const nRow =
+        document.createElement("tr");
+
+    addHeaderCell(nRow, "n");
+
+    for (const n of nValues) {
+        addDataCell(nRow, n);
+    }
+
+    table.appendChild(nRow);
+
+
+    /*
+       Row 2 and Row 3:
+       the two sequences being multiplied.
+    */
+
+    const firstRow =
+        document.createElement("tr");
+
+    const secondRow =
+        document.createElement("tr");
+
+
+    if (type === "shiftSecond") {
+
+        addHeaderCell(
+            firstRow,
+            "x[n]"
+        );
+
+        addHeaderCell(
+            secondRow,
+            "y[n" +
+            signedMinusK(k) +
+            "]"
+        );
+
+    } else {
+
+        addHeaderCell(
+            firstRow,
+            "x[n" +
+            signedMinusK(k) +
+            "]"
+        );
+
+        addHeaderCell(
+            secondRow,
+            "y[n]"
+        );
+    }
+
+
+    for (const value of firstValues) {
+
+        addDataCell(
+            firstRow,
+            formatNumber(value)
+        );
+    }
+
+
+    for (const value of secondValues) {
+
+        addDataCell(
+            secondRow,
+            formatNumber(value)
+        );
+    }
+
+
+    table.appendChild(firstRow);
+    table.appendChild(secondRow);
+
+
+    /*
+       Product row
+    */
+
+    const productRow =
+        document.createElement("tr");
+
+    productRow.className =
+        "product-row";
+
+    addHeaderCell(
+        productRow,
+        "Product"
+    );
+
+    for (const value of products) {
+
+        addDataCell(
+            productRow,
+            formatNumber(value)
+        );
+    }
+
+    table.appendChild(productRow);
+
+    scroll.appendChild(table);
+    container.appendChild(scroll);
+}
+
+
+/* ============================================================
+   TABLE HELPERS
+   ============================================================ */
+
+function addHeaderCell(row, value) {
+
+    const cell =
+        document.createElement("th");
+
+    cell.textContent = value;
+
+    row.appendChild(cell);
+}
+
+
+function addDataCell(row, value) {
+
+    const cell =
+        document.createElement("td");
+
+    cell.textContent = value;
+
+    row.appendChild(cell);
+}
+
+
+/* ============================================================
+   SHOW THE MULTIPLY-AND-SUM OPERATION
+   ============================================================ */
+
+function createSumDisplay(
+    k,
+    firstValues,
+    secondValues,
+    products
+) {
+
+    const container =
+        document.getElementById(
+            "sumDisplay"
+        );
+
+    /*
+       Show only non-zero products in the expanded
+       expression. This prevents a very long line of
+       zero terms while the complete alignment remains
+       visible in the table above.
+    */
+
+    const terms = [];
+
+    for (let i = 0;
+         i < products.length;
+         i++) {
+
+        if (Math.abs(products[i]) > 1e-10) {
+
+            terms.push(
+                "(" +
+                formatNumber(firstValues[i]) +
+                ")(" +
+                formatNumber(secondValues[i]) +
+                ")"
+            );
+        }
+    }
+
+    let sum = 0;
+
+    for (const value of products) {
+        sum += value;
+    }
+
+    let expandedExpression;
+
+    if (terms.length === 0) {
+
+        expandedExpression = "0";
+
+    } else {
+
+        expandedExpression =
+            terms.join(" + ");
+    }
+
+
+    /*
+       Compare against the already calculated
+       correlation value for the same lag.
+    */
+
+    const correlationIndex =
+        correlationLags.indexOf(k);
+
+    const storedResult =
+        correlationIndex >= 0
+        ? correlationResult[
+            correlationIndex
+          ]
+        : sum;
+
+
+    container.innerHTML =
+        '<div class="sum-display">' +
+
+        '<strong>Multiply:</strong><br>' +
+
+        'r<sub>xy</sub>[' + k + '] = ' +
+        expandedExpression +
+
+        '<br><br>' +
+
+        '<strong>Sum the products:</strong>' +
+
+        '<div class="final-sum">' +
+        'r<sub>xy</sub>[' + k + '] = ' +
+        formatNumber(storedResult) +
+        '</div>' +
+
+        '</div>';
+}
+
+
+/* ============================================================
+   FIND PEAK
+   ============================================================ */
+
+function findPeak() {
+
+    if (correlationResult.length === 0) {
+
+        document
+            .getElementById(
+                "peakResult"
+            )
+            .innerHTML =
+            "Please compute the " +
+            "cross-correlation first.";
+
+        return;
+    }
+
+    const useAbsolute =
+        document.getElementById(
+            "absolutePeak"
+        ).checked;
+
+    let bestIndex = 0;
+
+    let bestMeasure =
+        useAbsolute
+        ? Math.abs(
+            correlationResult[0]
+          )
+        : correlationResult[0];
+
+
+    for (let i = 1;
+         i < correlationResult.length;
+         i++) {
+
+        const measure =
+            useAbsolute
+            ? Math.abs(
+                correlationResult[i]
+              )
+            : correlationResult[i];
+
+        if (measure > bestMeasure) {
+
+            bestMeasure =
+                measure;
+
+            bestIndex =
+                i;
+        }
+    }
+
+
+    highlightedPeakIndex =
+        bestIndex;
+
+    const lag =
+        correlationLags[
+            bestIndex
+        ];
+
+    const actualValue =
+        correlationResult[
+            bestIndex
+        ];
+
+
+    plotStem(
+        "correlationPlot",
+        correlationLags,
+        correlationResult,
+        "k",
+        "r_xy[k]",
+        bestIndex
+    );
+
+
+    let html = "";
+
+
+    if (useAbsolute) {
+
+        html +=
+            "<strong>Peak criterion:</strong> " +
+            "maximum |r<sub>xy</sub>[k]|" +
+            "<br><br>";
+
+        html +=
+            "<strong>Peak magnitude:</strong> " +
+            formatNumber(
+                Math.abs(actualValue)
+            ) +
+            "<br>";
+
+        html +=
+            "<strong>Signed correlation " +
+            "at this lag:</strong> " +
+            formatNumber(actualValue) +
+            "<br>";
+
+    } else {
+
+        html +=
+            "<strong>Peak criterion:</strong> " +
+            "maximum r<sub>xy</sub>[k]" +
+            "<br><br>";
+
+        html +=
+            "<strong>Peak correlation:</strong> " +
+            formatNumber(actualValue) +
+            "<br>";
+    }
+
+
+    html +=
+        "<strong>Peak lag:</strong> " +
+        "k = " + lag;
+
+
+    document
+        .getElementById(
+            "peakResult"
+        )
+        .innerHTML = html;
+
+
+    /*
+       Also select the peak lag in the lag
+       calculation selector. This makes it easy
+       for the student to inspect why the peak
+       occurred.
+    */
+
+    document
+        .getElementById(
+            "lagSelect"
+        )
+        .value = lag;
+}
+
+
+/* ============================================================
+   EVENT LISTENERS
+   ============================================================ */
+
+const signalControls = [
+
+    "xType",
+    "xShift",
+    "xScale",
+    "xNoise",
+    "xAddNoise",
+
+    "yType",
+    "yShift",
+    "yScale",
+    "yNoise",
+    "yAddNoise"
+];
+
+
+for (const id of signalControls) {
+
+    document
+        .getElementById(id)
+        .addEventListener(
+            "change",
+            updateSignals
+        );
+}
+
+
+document
+    .getElementById(
+        "newNoiseButton"
+    )
+    .addEventListener(
+        "click",
+        function () {
+
+            regenerateNoise();
+            updateSignals();
+        }
+    );
+
+
+document
+    .getElementById(
+        "correlationType"
+    )
+    .addEventListener(
+        "change",
+        function () {
+
+            updateCorrelationDescription();
+            invalidateCorrelation();
+        }
+    );
+
+
+document
+    .getElementById(
+        "computeButton"
+    )
+    .addEventListener(
+        "click",
+        computeCorrelation
+    );
+
+
+document
+    .getElementById(
+        "showCalculationButton"
+    )
+    .addEventListener(
+        "click",
+        showLagCalculation
+    );
+
+
+document
+    .getElementById(
+        "peakButton"
+    )
+    .addEventListener(
+        "click",
+        findPeak
+    );
+
+
+/* ============================================================
+   INITIALISE
+   ============================================================ */
+
+regenerateNoise();
+updateCorrelationDescription();
+updateSignals();
+
+</script>
+
+</body>
+</html>

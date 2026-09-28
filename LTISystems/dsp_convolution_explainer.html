@@ -1,0 +1,1400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>FIR Filter Explorer</title>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    padding: 28px;
+    font-family: Arial, Helvetica, sans-serif;
+    background: #f3f5f7;
+    color: #20252b;
+}
+
+.container {
+    max-width: 1050px;
+    margin: auto;
+}
+
+h1 {
+    margin-bottom: 5px;
+}
+
+.subtitle {
+    margin-top: 0;
+    color: #606a74;
+}
+
+.panel {
+    background: white;
+    border: 1px solid #d6dbe0;
+    border-radius: 8px;
+    padding: 20px;
+    margin: 20px 0;
+}
+
+.panel h2 {
+    margin-top: 0;
+    font-size: 1.25rem;
+}
+
+.controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 22px;
+    align-items: end;
+}
+
+.control {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+label {
+    font-weight: bold;
+}
+
+select,
+input {
+    font-size: 1rem;
+    padding: 7px 9px;
+    border: 1px solid #adb5bd;
+    border-radius: 4px;
+    background: white;
+}
+
+input[type="number"] {
+    width: 100px;
+}
+
+.coefficient {
+    width: 78px !important;
+    text-align: center;
+}
+
+.equation {
+    margin-top: 18px;
+    padding: 14px;
+    background: #f7f8fa;
+    border-left: 4px solid #35689a;
+    font-family: "Times New Roman", serif;
+    font-size: 1.2rem;
+    line-height: 2.1;
+}
+
+.description {
+    margin-top: 12px;
+    color: #555f68;
+}
+
+.plot-container {
+    margin-top: 18px;
+    width: 100%;
+    overflow-x: auto;
+}
+
+svg {
+    display: block;
+    width: 100%;
+    min-width: 650px;
+    height: auto;
+}
+
+button {
+    padding: 11px 22px;
+    border: none;
+    border-radius: 5px;
+    background: #315f91;
+    color: white;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #244a72;
+}
+
+.hidden {
+    display: none;
+}
+
+.output-table-wrapper {
+    overflow-x: auto;
+    margin-top: 18px;
+}
+
+table {
+    border-collapse: collapse;
+    min-width: 100%;
+    text-align: center;
+}
+
+th,
+td {
+    border: 1px solid #ccd2d8;
+    padding: 7px 9px;
+    white-space: nowrap;
+}
+
+th {
+    background: #edf0f3;
+}
+
+.small-note {
+    color: #68717a;
+    font-size: 0.9rem;
+    margin-top: 8px;
+}
+
+@media (max-width: 650px) {
+    body {
+        padding: 12px;
+    }
+
+    .panel {
+        padding: 14px;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>Discrete-Time FIR Filter Explorer</h1>
+
+<p class="subtitle">
+Explore how a finite impulse response (FIR) system acts on
+different discrete-time input signals.
+</p>
+
+
+<!-- ============================================================
+     FILTER
+     ============================================================ -->
+
+<div class="panel">
+
+    <h2>1. Select the FIR filter</h2>
+
+    <div class="controls">
+
+        <div class="control">
+            <label for="filterSelect">Filter</label>
+
+            <select id="filterSelect">
+                <option value="3">3-point moving average</option>
+                <option value="5">5-point moving average</option>
+                <option value="7">7-point moving average</option>
+            </select>
+        </div>
+
+    </div>
+
+    <div id="filterEquation" class="equation"></div>
+
+    <div class="small-note">
+        The coefficients can also be edited manually.
+    </div>
+
+</div>
+
+
+<!-- ============================================================
+     INPUT SIGNAL
+     ============================================================ -->
+
+<div class="panel">
+
+    <h2>2. Select the input signal</h2>
+
+    <div class="controls">
+
+        <div class="control">
+
+            <label for="inputSelect">Base signal x₀[n]</label>
+
+            <select id="inputSelect">
+                <option value="impulse">Unit impulse</option>
+                <option value="step">Unit step</option>
+                <option value="pulse">Rectangular pulse</option>
+                <option value="finite">Finite sequence</option>
+            </select>
+
+        </div>
+
+
+        <div class="control">
+
+            <label for="scaleInput">Scale factor A</label>
+
+            <input
+                id="scaleInput"
+                type="number"
+                value="1"
+                step="0.1"
+            >
+
+        </div>
+
+
+        <div class="control">
+
+            <label for="shiftInput">Time shift n₀</label>
+
+            <input
+                id="shiftInput"
+                type="number"
+                value="0"
+                step="1"
+            >
+
+        </div>
+
+    </div>
+
+
+    <div class="equation">
+        x[n] = A x₀[n − n₀]
+    </div>
+
+
+    <div id="baseSignalDescription" class="description"></div>
+
+    <div id="inputEquation" class="equation"></div>
+
+    <div id="inputPlot" class="plot-container"></div>
+
+</div>
+
+
+<!-- ============================================================
+     CALCULATION
+     ============================================================ -->
+
+<div class="panel">
+
+    <h2>3. Compute the output</h2>
+
+    <p>
+        The FIR system calculates the output using
+    </p>
+
+    <div class="equation">
+        y[n] =
+        b<sub>0</sub>x[n]
+        + b<sub>1</sub>x[n−1]
+        + b<sub>2</sub>x[n−2]
+        + &hellip;
+    </div>
+
+    <br>
+
+    <button id="computeButton">
+        Compute y[n]
+    </button>
+
+</div>
+
+
+<!-- ============================================================
+     OUTPUT
+     ============================================================ -->
+
+<div id="outputPanel" class="panel hidden">
+
+    <h2>4. Output signal</h2>
+
+    <div id="outputValues"></div>
+
+    <div id="outputPlot" class="plot-container"></div>
+
+</div>
+
+</div>
+
+
+<script>
+
+/* ==============================================================
+   DISPLAY RANGE
+   ============================================================== */
+
+const nMin = -10;
+const nMax = 15;
+
+
+/* ==============================================================
+   MOVING-AVERAGE FILTER
+   ============================================================== */
+
+let currentCoefficients = [];
+
+
+function setMovingAverage(length) {
+
+    currentCoefficients =
+        Array(length).fill(1 / length);
+
+    updateFilterEquation();
+}
+
+
+/* ==============================================================
+   FILTER EQUATION
+   ============================================================== */
+
+function updateFilterEquation() {
+
+    const container =
+        document.getElementById("filterEquation");
+
+    let html = "<strong>y[n] = </strong>";
+
+
+    currentCoefficients.forEach((b, k) => {
+
+        if (k > 0) {
+            html += " + ";
+        }
+
+        let signalTerm;
+
+        if (k === 0) {
+            signalTerm = "x[n]";
+        }
+        else {
+            signalTerm = `x[n−${k}]`;
+        }
+
+
+        html += `
+            <input
+                type="number"
+                class="coefficient"
+                data-index="${k}"
+                value="${displayCoefficient(b)}"
+                step="0.001"
+            >
+            ${signalTerm}
+        `;
+    });
+
+
+    container.innerHTML = html;
+}
+
+
+/*
+   This is only used for displaying the initial
+   moving-average coefficients.
+
+   The actual values stored in currentCoefficients
+   remain full precision.
+*/
+
+function displayCoefficient(value) {
+
+    return parseFloat(value.toFixed(4));
+}
+
+
+/* ==============================================================
+   READ MANUALLY EDITED COEFFICIENTS
+   ============================================================== */
+
+function readCoefficients() {
+
+    const boxes =
+        document.querySelectorAll(".coefficient");
+
+
+    /*
+       If the user has not edited a coefficient,
+       preserve the full-precision value.
+
+       If it has been edited, use the value shown
+       in the box.
+    */
+
+    boxes.forEach((box, i) => {
+
+        if (box.dataset.edited === "true") {
+
+            const value = parseFloat(box.value);
+
+            currentCoefficients[i] =
+                Number.isFinite(value) ? value : 0;
+        }
+    });
+
+
+    return currentCoefficients;
+}
+
+
+/* ==============================================================
+   BASE SIGNAL
+   ============================================================== */
+
+function baseSignal(m) {
+
+    const type =
+        document.getElementById("inputSelect").value;
+
+
+    switch (type) {
+
+        /* Unit impulse */
+
+        case "impulse":
+
+            return (m === 0) ? 1 : 0;
+
+
+        /* Unit step */
+
+        case "step":
+
+            return (m >= 0) ? 1 : 0;
+
+
+        /*
+           Five-sample rectangular pulse
+
+           x0[n] = 1 for 0 <= n <= 4
+        */
+
+        case "pulse":
+
+            return (
+                m >= 0 &&
+                m <= 4
+            ) ? 1 : 0;
+
+
+        /*
+           Finite sequence
+
+           n:      0  1  2  3  4  5  6
+           x0[n]:  1  2  3  4  3  2  1
+        */
+
+        case "finite":
+
+            const sequence =
+                [1, 2, 3, 4, 3, 2, 1];
+
+            if (
+                m >= 0 &&
+                m < sequence.length
+            ) {
+                return sequence[m];
+            }
+
+            return 0;
+
+
+        default:
+
+            return 0;
+    }
+}
+
+
+/* ==============================================================
+   TRANSFORMED INPUT SIGNAL
+
+       x[n] = A x0[n - n0]
+
+   ============================================================== */
+
+function inputSignal(n) {
+
+    const A =
+        parseFloat(
+            document.getElementById("scaleInput").value
+        );
+
+    const n0 =
+        parseInt(
+            document.getElementById("shiftInput").value
+        );
+
+
+    const scale =
+        Number.isFinite(A) ? A : 0;
+
+    const shift =
+        Number.isFinite(n0) ? n0 : 0;
+
+
+    return scale * baseSignal(n - shift);
+}
+
+
+/* ==============================================================
+   BASE-SIGNAL DESCRIPTION
+   ============================================================== */
+
+function updateBaseSignalDescription() {
+
+    const type =
+        document.getElementById("inputSelect").value;
+
+    const container =
+        document.getElementById(
+            "baseSignalDescription"
+        );
+
+
+    switch (type) {
+
+        case "impulse":
+
+            container.innerHTML =
+                "<strong>Base signal:</strong> x₀[n] = δ[n]";
+
+            break;
+
+
+        case "step":
+
+            container.innerHTML =
+                "<strong>Base signal:</strong> x₀[n] = u[n]";
+
+            break;
+
+
+        case "pulse":
+
+            container.innerHTML = `
+                <strong>Base signal:</strong>
+                x₀[n] = 1 for 0 ≤ n ≤ 4,
+                and 0 otherwise.
+            `;
+
+            break;
+
+
+        case "finite":
+
+            container.innerHTML = `
+                <strong>Base signal:</strong><br>
+                n = 0, 1, 2, 3, 4, 5, 6<br>
+                x₀[n] = 1, 2, 3, 4, 3, 2, 1
+            `;
+
+            break;
+    }
+}
+
+
+/* ==============================================================
+   INPUT EQUATION
+   ============================================================== */
+
+function updateInputEquation() {
+
+    const type =
+        document.getElementById("inputSelect").value;
+
+    let A =
+        parseFloat(
+            document.getElementById("scaleInput").value
+        );
+
+    let n0 =
+        parseInt(
+            document.getElementById("shiftInput").value
+        );
+
+
+    if (!Number.isFinite(A)) {
+        A = 0;
+    }
+
+    if (!Number.isFinite(n0)) {
+        n0 = 0;
+    }
+
+
+    let shiftedArgument;
+
+    if (n0 === 0) {
+
+        shiftedArgument = "n";
+
+    }
+    else if (n0 > 0) {
+
+        shiftedArgument = `n−${n0}`;
+
+    }
+    else {
+
+        shiftedArgument =
+            `n+${Math.abs(n0)}`;
+    }
+
+
+    let equation;
+
+
+    switch (type) {
+
+        case "impulse":
+
+            equation =
+                `x[n] = ${formatNumber(A)} δ[${shiftedArgument}]`;
+
+            break;
+
+
+        case "step":
+
+            equation =
+                `x[n] = ${formatNumber(A)} u[${shiftedArgument}]`;
+
+            break;
+
+
+        case "pulse":
+
+            equation =
+                `x[n] = ${formatNumber(A)} p[${shiftedArgument}]`;
+
+            break;
+
+
+        case "finite":
+
+            equation =
+                `x[n] = ${formatNumber(A)} x₀[${shiftedArgument}]`;
+
+            break;
+    }
+
+
+    document.getElementById(
+        "inputEquation"
+    ).innerHTML = equation;
+}
+
+
+/* ==============================================================
+   INPUT DATA
+   ============================================================== */
+
+function getInputData() {
+
+    const n = [];
+    const x = [];
+
+
+    for (
+        let index = nMin;
+        index <= nMax;
+        index++
+    ) {
+
+        n.push(index);
+        x.push(inputSignal(index));
+    }
+
+
+    return { n, x };
+}
+
+
+/* ==============================================================
+   FIR OUTPUT
+
+       y[n] = sum b[k] x[n-k]
+
+   ============================================================== */
+
+function calculateOutput() {
+
+    const b = readCoefficients();
+
+    const outputMin = nMin;
+
+    const outputMax =
+        nMax + b.length - 1;
+
+
+    const nValues = [];
+    const yValues = [];
+
+
+    for (
+        let n = outputMin;
+        n <= outputMax;
+        n++
+    ) {
+
+        let y = 0;
+
+
+        for (
+            let k = 0;
+            k < b.length;
+            k++
+        ) {
+
+            y +=
+                b[k] *
+                inputSignal(n - k);
+        }
+
+
+        /*
+           Remove tiny floating-point errors.
+        */
+
+        if (Math.abs(y) < 1e-12) {
+            y = 0;
+        }
+
+
+        nValues.push(n);
+        yValues.push(y);
+    }
+
+
+    return {
+        n: nValues,
+        y: yValues
+    };
+}
+
+
+/* ==============================================================
+   STEM PLOT
+   ============================================================== */
+
+function drawStemPlot(
+    containerId,
+    nValues,
+    values,
+    title
+) {
+
+    const container =
+        document.getElementById(containerId);
+
+
+    const width = 950;
+    const height = 400;
+
+
+    const margin = {
+        left: 75,
+        right: 35,
+        top: 50,
+        bottom: 65
+    };
+
+
+    const plotWidth =
+        width -
+        margin.left -
+        margin.right;
+
+
+    const plotHeight =
+        height -
+        margin.top -
+        margin.bottom;
+
+
+    /* ----------------------------------------------------------
+       Determine vertical range
+       ---------------------------------------------------------- */
+
+    let minimum =
+        Math.min(...values, 0);
+
+    let maximum =
+        Math.max(...values, 0);
+
+
+    if (minimum === maximum) {
+
+        minimum -= 1;
+        maximum += 1;
+    }
+
+
+    const rawRange =
+        maximum - minimum;
+
+
+    const padding =
+        rawRange * 0.15;
+
+
+    let yMin =
+        minimum - padding;
+
+    let yMax =
+        maximum + padding;
+
+
+    /*
+       Add some space around zero for one-sided signals.
+    */
+
+    if (minimum === 0) {
+
+        yMin =
+            -0.2 *
+            Math.max(1, maximum);
+    }
+
+
+    if (maximum === 0) {
+
+        yMax =
+            0.2 *
+            Math.max(1, Math.abs(minimum));
+    }
+
+
+    /* ----------------------------------------------------------
+       Coordinate transformations
+       ---------------------------------------------------------- */
+
+    const firstN =
+        nValues[0];
+
+    const lastN =
+        nValues[nValues.length - 1];
+
+
+    function xCoordinate(n) {
+
+        return (
+            margin.left +
+            (n - firstN) /
+            (lastN - firstN) *
+            plotWidth
+        );
+    }
+
+
+    function yCoordinate(value) {
+
+        return (
+            margin.top +
+            (yMax - value) /
+            (yMax - yMin) *
+            plotHeight
+        );
+    }
+
+
+    const zeroY =
+        yCoordinate(0);
+
+
+    /* ----------------------------------------------------------
+       Start SVG
+       ---------------------------------------------------------- */
+
+    let svg = `
+
+        <svg
+            viewBox="0 0 ${width} ${height}"
+            xmlns="http://www.w3.org/2000/svg"
+            role="img"
+            aria-label="${title}"
+        >
+
+        <rect
+            x="0"
+            y="0"
+            width="${width}"
+            height="${height}"
+            fill="white"
+        />
+    `;
+
+
+    /* ----------------------------------------------------------
+       Horizontal grid
+       ---------------------------------------------------------- */
+
+    const horizontalLines = 8;
+
+
+    for (
+        let i = 0;
+        i <= horizontalLines;
+        i++
+    ) {
+
+        const value =
+            yMin +
+            i *
+            (yMax - yMin) /
+            horizontalLines;
+
+
+        const y =
+            yCoordinate(value);
+
+
+        svg += `
+
+            <line
+                x1="${margin.left}"
+                y1="${y}"
+                x2="${width - margin.right}"
+                y2="${y}"
+                stroke="#d8dde2"
+                stroke-width="1"
+            />
+
+            <text
+                x="${margin.left - 10}"
+                y="${y + 4}"
+                text-anchor="end"
+                font-size="12"
+                fill="#4e5862"
+            >
+                ${formatNumber(value)}
+            </text>
+        `;
+    }
+
+
+    /* ----------------------------------------------------------
+       Vertical grid
+       ---------------------------------------------------------- */
+
+    nValues.forEach(n => {
+
+        const x =
+            xCoordinate(n);
+
+
+        svg += `
+
+            <line
+                x1="${x}"
+                y1="${margin.top}"
+                x2="${x}"
+                y2="${height - margin.bottom}"
+                stroke="#e5e8eb"
+                stroke-width="1"
+            />
+        `;
+
+
+        /*
+           Avoid overcrowding the horizontal axis.
+        */
+
+        const showLabel =
+            nValues.length <= 22 ||
+            n % 2 === 0;
+
+
+        if (showLabel) {
+
+            svg += `
+
+                <text
+                    x="${x}"
+                    y="${height - margin.bottom + 22}"
+                    text-anchor="middle"
+                    font-size="12"
+                    fill="#4e5862"
+                >
+                    ${n}
+                </text>
+            `;
+        }
+    });
+
+
+    /* ----------------------------------------------------------
+       Main axes
+       ---------------------------------------------------------- */
+
+    svg += `
+
+        <line
+            x1="${margin.left}"
+            y1="${zeroY}"
+            x2="${width - margin.right}"
+            y2="${zeroY}"
+            stroke="#20252b"
+            stroke-width="2"
+        />
+
+        <line
+            x1="${margin.left}"
+            y1="${margin.top}"
+            x2="${margin.left}"
+            y2="${height - margin.bottom}"
+            stroke="#20252b"
+            stroke-width="2"
+        />
+    `;
+
+
+    /* ----------------------------------------------------------
+       Stems
+       ---------------------------------------------------------- */
+
+    values.forEach((value, i) => {
+
+        const x =
+            xCoordinate(nValues[i]);
+
+        const y =
+            yCoordinate(value);
+
+
+        svg += `
+
+            <line
+                x1="${x}"
+                y1="${zeroY}"
+                x2="${x}"
+                y2="${y}"
+                stroke="#1769aa"
+                stroke-width="3"
+            />
+
+            <circle
+                cx="${x}"
+                cy="${y}"
+                r="5"
+                fill="#1769aa"
+                stroke="white"
+                stroke-width="1.5"
+            />
+        `;
+    });
+
+
+    /* ----------------------------------------------------------
+       Plot title and axis labels
+       ---------------------------------------------------------- */
+
+    svg += `
+
+        <text
+            x="${width / 2}"
+            y="27"
+            text-anchor="middle"
+            font-size="19"
+            font-weight="bold"
+            fill="#20252b"
+        >
+            ${title}
+        </text>
+
+
+        <text
+            x="${width - margin.right + 8}"
+            y="${zeroY - 8}"
+            font-size="15"
+            font-style="italic"
+            fill="#20252b"
+        >
+            n
+        </text>
+
+
+        <text
+            x="20"
+            y="${height / 2}"
+            text-anchor="middle"
+            font-size="15"
+            fill="#20252b"
+            transform="
+                rotate(
+                    -90
+                    20
+                    ${height / 2}
+                )
+            "
+        >
+            Amplitude
+        </text>
+
+
+        </svg>
+    `;
+
+
+    container.innerHTML = svg;
+}
+
+
+/* ==============================================================
+   OUTPUT TABLE
+   ============================================================== */
+
+function displayOutputValues(
+    nValues,
+    yValues
+) {
+
+    let html = `
+
+        <h3>Numerical values</h3>
+
+        <div class="output-table-wrapper">
+
+        <table>
+
+        <tr>
+
+            <th>n</th>
+    `;
+
+
+    nValues.forEach(n => {
+
+        html += `<td>${n}</td>`;
+    });
+
+
+    html += `
+
+        </tr>
+
+        <tr>
+
+            <th>y[n]</th>
+    `;
+
+
+    yValues.forEach(value => {
+
+        html += `
+            <td>
+                ${formatNumber(value)}
+            </td>
+        `;
+    });
+
+
+    html += `
+
+        </tr>
+
+        </table>
+
+        </div>
+    `;
+
+
+    document.getElementById(
+        "outputValues"
+    ).innerHTML = html;
+}
+
+
+/* ==============================================================
+   NUMBER FORMATTING
+   ============================================================== */
+
+function formatNumber(value) {
+
+    if (Math.abs(value) < 1e-12) {
+        return "0";
+    }
+
+
+    if (
+        Math.abs(
+            value - Math.round(value)
+        ) < 1e-10
+    ) {
+
+        return Math.round(value).toString();
+    }
+
+
+    return parseFloat(
+        value.toFixed(3)
+    ).toString();
+}
+
+
+/* ==============================================================
+   UPDATE INPUT
+   ============================================================== */
+
+function updateInputDisplay() {
+
+    updateBaseSignalDescription();
+    updateInputEquation();
+
+
+    const data =
+        getInputData();
+
+
+    drawStemPlot(
+        "inputPlot",
+        data.n,
+        data.x,
+        "Input signal x[n]"
+    );
+
+
+    /*
+       Input has changed, so the previous output
+       is no longer valid.
+    */
+
+    document
+        .getElementById("outputPanel")
+        .classList
+        .add("hidden");
+}
+
+
+/* ==============================================================
+   COMPUTE OUTPUT
+   ============================================================== */
+
+function computeOutput() {
+
+    const result =
+        calculateOutput();
+
+
+    displayOutputValues(
+        result.n,
+        result.y
+    );
+
+
+    drawStemPlot(
+        "outputPlot",
+        result.n,
+        result.y,
+        "Output signal y[n]"
+    );
+
+
+    document
+        .getElementById("outputPanel")
+        .classList
+        .remove("hidden");
+}
+
+
+/* ==============================================================
+   EVENT LISTENERS
+   ============================================================== */
+
+document
+    .getElementById("filterSelect")
+    .addEventListener(
+        "change",
+        function () {
+
+            const length =
+                parseInt(this.value);
+
+            setMovingAverage(length);
+
+            document
+                .getElementById("outputPanel")
+                .classList
+                .add("hidden");
+        }
+    );
+
+
+document
+    .getElementById("inputSelect")
+    .addEventListener(
+        "change",
+        updateInputDisplay
+    );
+
+
+document
+    .getElementById("scaleInput")
+    .addEventListener(
+        "input",
+        updateInputDisplay
+    );
+
+
+document
+    .getElementById("shiftInput")
+    .addEventListener(
+        "input",
+        updateInputDisplay
+    );
+
+
+document
+    .getElementById("computeButton")
+    .addEventListener(
+        "click",
+        computeOutput
+    );
+
+
+/*
+   Detect manual editing of FIR coefficients.
+*/
+
+document
+    .getElementById("filterEquation")
+    .addEventListener(
+        "input",
+        function (event) {
+
+            if (
+                event.target.classList
+                .contains("coefficient")
+            ) {
+
+                event.target.dataset.edited =
+                    "true";
+
+                document
+                    .getElementById("outputPanel")
+                    .classList
+                    .add("hidden");
+            }
+        }
+    );
+
+
+/* ==============================================================
+   INITIALISE PAGE
+   ============================================================== */
+
+setMovingAverage(3);
+updateInputDisplay();
+
+</script>
+
+</body>
+</html>
